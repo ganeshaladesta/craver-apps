@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useId, useRef } from "react";
+import { useCraver } from "@/components/providers/CraverProviders";
 
 interface ConfirmDialogProps {
   open: boolean;
@@ -18,16 +19,20 @@ export function ConfirmDialog({
   open,
   title,
   description,
-  confirmLabel = "Confirm",
-  cancelLabel = "Cancel",
+  confirmLabel,
+  cancelLabel,
   destructive = false,
   busy = false,
   onConfirm,
   onCancel,
 }: ConfirmDialogProps) {
+  const { t } = useCraver();
   const dialogRef = useRef<HTMLDialogElement>(null);
   const titleId = useId();
   const descId = useId();
+
+  const effectiveConfirm = confirmLabel || t.common.confirm;
+  const effectiveCancel = cancelLabel || t.common.cancel;
 
   useEffect(() => {
     const dialog = dialogRef.current;
@@ -113,9 +118,9 @@ export function ConfirmDialog({
             value="cancel"
             autoFocus
             disabled={busy}
-            className="min-h-11 rounded-lg border border-[#E8E8E8] bg-white px-4 py-2 text-sm font-medium text-[#1C1C1C] transition hover:bg-[#FAFAFA] disabled:opacity-60"
+            className="min-h-11 rounded-lg border border-[#EEEEEE] bg-white px-4 py-2 text-sm font-medium text-[#1C1C1C] transition hover:bg-[#FAFAFA] disabled:opacity-60"
           >
-            {cancelLabel}
+            {effectiveCancel}
           </button>
           <button
             type="button"
@@ -132,11 +137,10 @@ export function ConfirmDialog({
                 : "min-h-11 rounded-lg bg-[#E23744] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#C91D2B] disabled:opacity-60"
             }
           >
-            {busy ? "Processing..." : confirmLabel}
+            {busy ? t.common.processing : effectiveConfirm}
           </button>
         </form>
       </div>
     </dialog>
   );
 }
-

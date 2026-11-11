@@ -5,28 +5,30 @@ interface CraverLogoProps {
   className?: string;
   size?: "sm" | "md" | "lg";
   linked?: boolean;
+  tone?: "dark" | "light";
 }
 
 export function CraverLogo({
   className,
   size = "md",
   linked = true,
+  tone = "dark",
 }: CraverLogoProps) {
   const iconDims =
     size === "sm"
-      ? "h-7 w-7"
+      ? "h-6 w-6 min-[360px]:h-7 min-[360px]:w-7"
       : size === "lg"
         ? "h-10 w-10"
-        : "h-7 w-7 sm:h-8 sm:w-8";
+        : "h-6 w-6 min-[360px]:h-7 min-[360px]:w-7 sm:h-8 sm:w-8";
   const textSize =
     size === "sm"
-      ? "text-lg tracking-[-0.03em]"
+      ? "text-sm min-[360px]:text-base tracking-[-0.03em]"
       : size === "lg"
         ? "text-2xl tracking-[-0.04em]"
-        : "text-lg sm:text-xl tracking-[-0.035em]";
+        : "text-[14px] min-[360px]:text-lg sm:text-xl tracking-[-0.035em]";
 
   const content = (
-    <span className={cn("inline-flex items-center gap-2 select-none", className)}>
+    <span className={cn("inline-flex items-center gap-1.5 min-[360px]:gap-2 select-none", className)}>
       <span
         className={cn(
           "inline-flex items-center justify-center rounded-lg bg-[#E23744] text-white shrink-0 shadow-xs",
@@ -53,7 +55,8 @@ export function CraverLogo({
       </span>
       <span
         className={cn(
-          "font-display font-extrabold text-[#1C1C1C]",
+          "font-display font-extrabold transition-colors",
+          tone === "light" ? "text-white" : "text-[#1C1C1C]",
           textSize
         )}
       >
@@ -74,4 +77,3 @@ export function CraverLogo({
     </Link>
   );
 }
-

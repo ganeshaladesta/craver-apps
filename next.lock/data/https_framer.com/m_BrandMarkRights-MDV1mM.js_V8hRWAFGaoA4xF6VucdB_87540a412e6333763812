@@ -1,0 +1,8 @@
+/*
+ * CopyrightMark
+ *
+ * Learn More: https://www.framer.com/asset-urls
+ */
+
+export * from "https://framerusercontent.com/modules/eN9YroxTEt8c6YYLeHNR/V8hRWAFGaoA4xF6VucdB/CopyrightMark.js"
+export { default } from "https://framerusercontent.com/modules/eN9YroxTEt8c6YYLeHNR/V8hRWAFGaoA4xF6VucdB/CopyrightMark.js"

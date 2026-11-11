@@ -4,3 +4,7 @@ declare module "https://framer.com/m/*" {
   export default Component;
 }
 
+declare module "https://esm.sh/*" {
+  const mod: any;
+  export default mod;
+}

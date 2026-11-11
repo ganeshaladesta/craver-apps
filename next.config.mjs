@@ -10,6 +10,7 @@ const nextConfig = {
     urlImports: [
       "https://framer.com/m/",
       "https://framerusercontent.com/",
+      "https://esm.sh/",
     ],
   },
   images: {

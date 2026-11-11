@@ -28,6 +28,7 @@ import {
 import { useCraver } from "@/components/providers/CraverProviders";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { SaveToCollectionModal } from "@/components/restaurants/SaveToCollectionModal";
+import { formatT, translateCategory } from "@/lib/i18n/dictionary";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { removeImageFromSupabase, uploadImageToSupabase } from "@/lib/supabase/storage";
 import {
@@ -58,13 +59,7 @@ interface RestaurantDetailClientProps {
   initialTab?: string;
 }
 
-const TABS: Array<{ key: TabKey; label: string }> = [
-  { key: "overview", label: "Overview" },
-  { key: "menu", label: "Menu" },
-  { key: "reviews", label: "Reviews" },
-  { key: "photos", label: "Photos" },
-  { key: "updates", label: "Updates" },
-];
+const TAB_KEYS: TabKey[] = ["overview", "menu", "reviews", "photos", "updates"];
 
 export function RestaurantDetailClient({
   restaurant,
@@ -76,11 +71,12 @@ export function RestaurantDetailClient({
   initialTab = "overview",
 }: RestaurantDetailClientProps) {
   const router = useRouter();
-  const { user, profile, favoriteIds, toggleFavorite, showToast } = useCraver();
+  const { user, profile, favoriteIds, toggleFavorite, showToast, locale, t } = useCraver();
   const isAdmin = profile?.role === "admin";
   const isSaved = favoriteIds.includes(restaurant.id);
+  const tabs = TAB_KEYS.map((key) => ({ key, label: t.restaurant.tabs[key] }));
 
-  const normalizedTab: TabKey = TABS.some((t) => t.key === initialTab)
+  const normalizedTab: TabKey = TAB_KEYS.includes(initialTab as TabKey)
     ? (initialTab as TabKey)
     : "overview";
   const [activeTab, setActiveTab] = useState<TabKey>(normalizedTab);
@@ -102,7 +98,7 @@ export function RestaurantDetailClient({
     id: string;
     label: string;
   } | null>(null);
-  const [reportReason, setReportReason] = useState("Inaccurate information");
+  const [reportReasonIdx, setReportReasonIdx] = useState(0);
   const [reportDetails, setReportDetails] = useState("");
   const [reportBusy, setReportBusy] = useState(false);
 
@@ -124,7 +120,7 @@ export function RestaurantDetailClient({
       const target = e.target as HTMLElement | null;
       const panel = target?.closest('[role="tabpanel"]') as HTMLElement | null;
       const key = panel?.dataset.tabKey as TabKey | undefined;
-      if (key && TABS.some((t) => t.key === key)) {
+      if (key && TAB_KEYS.includes(key)) {
         setActiveTab(key);
       }
     };
@@ -338,9 +334,9 @@ export function RestaurantDetailClient({
     }
     try {
       await navigator.clipboard.writeText(shareUrl);
-      showToast("Restaurant link copied to clipboard.", "success");
+      showToast(t.common.toasts.linkCopied, "success");
     } catch {
-      showToast("Copy the URL from your browser address bar.", "info");
+      showToast(t.common.toasts.copyManual, "info");
     }
   };
 
@@ -809,7 +805,7 @@ export function RestaurantDetailClient({
       reporter_id: user!.id,
       target_type: reportTarget.type,
       target_id: reportTarget.id,
-      reason: reportReason,
+      reason: t.restaurant.reportReasons[reportReasonIdx] ?? t.restaurant.reportReasons[0],
       details: reportDetails.trim(),
       status: "open",
     });
@@ -827,16 +823,18 @@ export function RestaurantDetailClient({
   const reportTitleId = useId();
   const lightboxTitleId = useId();
 
+  const getStatusLabel = (status: string) =>
+    t.common.statusLabels[status as keyof typeof t.common.statusLabels] ?? status;
+
   return (
     <div className="bg-white">
       {/* Restaurant Moderation Notice for owner/admin when not approved */}
       {restaurant.status !== "approved" && (
-        <div className="border-b border-[#E8E8E8] bg-[#FFF0F1] px-4 py-3 text-sm text-[#1C1C1C]">
+        <div className="border-b border-[#EEEEEE] bg-[#FFF0F1] px-4 py-3 text-sm text-[#1C1C1C]">
           <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-2">
             <p className="font-medium">
-              Status:{" "}
               <span className="font-bold uppercase text-[#C91D2B]">
-                {restaurant.status}
+                {getStatusLabel(restaurant.status)}
               </span>
               {restaurant.rejection_reason && ` — ${restaurant.rejection_reason}`}
             </p>
@@ -844,232 +842,246 @@ export function RestaurantDetailClient({
               href={`/contribute?edit=${restaurant.id}`}
               className="font-semibold text-[#E23744] underline"
             >
-              Edit Submission
+              {t.restaurant.editSubmission}
             </Link>
           </div>
         </div>
       )}
 
-      {/* Cover Image Gallery Banner */}
-      <section className="mx-auto max-w-7xl px-4 pt-6 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-1 gap-3 md:grid-cols-12">
-          <button
-            type="button"
-            onClick={() => galleryPhotos[0] && setLightboxPhoto(galleryPhotos[0])}
-            className="group relative aspect-[16/10] overflow-hidden rounded-2xl border border-[#E8E8E8] bg-[#FAFAFA] md:col-span-7 md:aspect-[16/9]"
-          >
-            <img
-              src={
-                restaurant.cover_image_url ||
-                galleryPhotos[0]?.url ||
-                "/images/rest-indonesian-senopati.jpg"
-              }
-              alt={restaurant.name}
-              className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.02]"
-            />
-          </button>
+      {/* Cover Image Gallery Banner + Header Identity on Cream #FFF6E9 */}
+      <section className="border-b border-[#EEEEEE] bg-[#FFF6E9] pt-6">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-12">
+            <button
+              type="button"
+              onClick={() => galleryPhotos[0] && setLightboxPhoto(galleryPhotos[0])}
+              className="group relative aspect-[16/10] overflow-hidden rounded-2xl border border-[#EEEEEE] bg-[#FAFAFA] md:col-span-7 md:aspect-[16/9]"
+            >
+              <img
+                src={
+                  restaurant.cover_image_url ||
+                  galleryPhotos[0]?.url ||
+                  "/images/rest-indonesian-senopati.jpg"
+                }
+                alt={restaurant.name}
+                className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.02]"
+              />
+            </button>
 
-          <div className="grid grid-cols-2 gap-3 md:col-span-5">
-            {galleryPhotos.slice(1, 5).map((photo, idx) => (
-              <button
-                key={photo.id}
-                type="button"
-                onClick={() => setLightboxPhoto(photo)}
-                className="group relative aspect-[4/3] overflow-hidden rounded-2xl border border-[#E8E8E8] bg-[#FAFAFA]"
-              >
-                <img
-                  src={photo.url}
-                  alt={photo.caption || `${restaurant.name} photo ${idx + 2}`}
-                  className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.04]"
-                />
-                {idx === 3 && galleryPhotos.length > 5 && (
-                  <span className="absolute inset-0 flex items-center justify-center bg-black/55 text-sm font-bold text-white">
-                    +{galleryPhotos.length - 5} Photos
+            <div className="grid grid-cols-2 gap-3 md:col-span-5">
+              {galleryPhotos.slice(1, 5).map((photo, idx) => (
+                <button
+                  key={photo.id}
+                  type="button"
+                  onClick={() => setLightboxPhoto(photo)}
+                  className="group relative aspect-[4/3] overflow-hidden rounded-2xl border border-[#EEEEEE] bg-[#FAFAFA]"
+                >
+                  <img
+                    src={photo.url}
+                    alt={photo.caption || `${restaurant.name} ${idx + 2}`}
+                    className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.04]"
+                  />
+                  {idx === 3 && galleryPhotos.length > 5 && (
+                    <span className="absolute inset-0 flex items-center justify-center bg-black/55 text-sm font-bold text-white">
+                      {formatT(t.restaurant.morePhotos, {
+                        count: galleryPhotos.length - 5,
+                      })}
+                    </span>
+                  )}
+                </button>
+              ))}
+              {galleryPhotos.length <= 1 && (
+                <button
+                  type="button"
+                  onClick={() => selectTab("photos")}
+                  className="col-span-2 flex flex-col items-center justify-center rounded-2xl border border-dashed border-[#E23744]/30 bg-white/80 p-6 text-center text-sm text-[#696969] hover:border-[#E23744] hover:text-[#E23744]"
+                >
+                  <Camera className="h-6 w-6 text-[#E23744]" aria-hidden="true" />
+                  <span className="mt-2 font-semibold">{t.restaurant.addFoodDiningPhotos}</span>
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Restaurant Header Identity */}
+          <div className="mt-6 flex flex-col justify-between gap-6 border-b border-[#EEEEEE] pb-6 lg:flex-row lg:items-start">
+            <div className="max-w-3xl">
+              <div className="flex flex-wrap items-center gap-2">
+                {restaurant.is_verified && (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-[#FFF0F1] px-2.5 py-1 text-xs font-semibold text-[#C91D2B]">
+                    <ShieldCheck className="h-3.5 w-3.5" aria-hidden="true" />
+                    {t.restaurant.verifiedSpot}
                   </span>
                 )}
-              </button>
-            ))}
-            {galleryPhotos.length <= 1 && (
-              <button
-                type="button"
-                onClick={() => selectTab("photos")}
-                className="col-span-2 flex flex-col items-center justify-center rounded-2xl border border-dashed border-[#E8E8E8] bg-[#FAFAFA] p-6 text-center text-sm text-[#696969] hover:border-[#E23744] hover:text-[#E23744]"
-              >
-                <Camera className="h-6 w-6" aria-hidden="true" />
-                <span className="mt-2 font-semibold">Add Food &amp; Dining Photos</span>
-              </button>
-            )}
-          </div>
-        </div>
-
-        {/* Restaurant Header Identity */}
-        <div className="mt-6 flex flex-col justify-between gap-6 border-b border-[#E8E8E8] pb-6 lg:flex-row lg:items-start">
-          <div className="max-w-3xl">
-            <div className="flex flex-wrap items-center gap-2">
-              {restaurant.is_verified && (
-                <span className="inline-flex items-center gap-1 rounded-full bg-[#FFF0F1] px-2.5 py-1 text-xs font-semibold text-[#C91D2B]">
-                  <ShieldCheck className="h-3.5 w-3.5" aria-hidden="true" />
-                  Verified Spot
-                </span>
-              )}
-              {restaurant.cuisines.map((c) => (
-                <Link
-                  key={c}
-                  href={`/explore?category=${encodeURIComponent(c)}`}
-                  className="rounded-full border border-[#E8E8E8] bg-[#FAFAFA] px-2.5 py-1 text-xs font-medium text-[#696969] hover:border-[#E23744] hover:text-[#E23744]"
-                >
-                  {c}
-                </Link>
-              ))}
-            </div>
-
-            <h1 className="mt-3 font-display text-3xl font-extrabold tracking-tight text-[#1C1C1C] sm:text-4xl">
-              {restaurant.name}
-            </h1>
-            {restaurant.tagline && (
-              <p className="mt-1 text-base font-medium text-[#696969]">
-                {restaurant.tagline}
-              </p>
-            )}
-
-            <div className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-[#696969]">
-              <span className="inline-flex items-center gap-1.5">
-                <MapPin className="h-4 w-4 text-[#E23744]" aria-hidden="true" />
-                <span>
-                  {restaurant.district}, {restaurant.city}
-                </span>
-              </span>
-              <span className="inline-flex items-center gap-1.5">
-                <Clock className="h-4 w-4 text-[#E23744]" aria-hidden="true" />
-                <span>{restaurant.opening_hours?.mon_fri || "10:00 - 22:00"}</span>
-              </span>
-              <span className="font-semibold text-[#1C1C1C]">
-                Avg. {formatIdr(restaurant.average_price_idr)} / person
-              </span>
-            </div>
-          </div>
-
-          {/* Right Header Rating + CTAs */}
-          <div className="flex flex-col items-start gap-4 lg:items-end">
-            <div className="flex items-center gap-3 rounded-xl border border-[#E8E8E8] bg-[#FAFAFA] px-4 py-2.5">
-              <div className="inline-flex items-center gap-1 rounded-lg bg-[#E23744] px-2.5 py-1 text-base font-bold text-white">
-                <span>
-                  {ratingSummary.totalShown > 0
-                    ? ratingSummary.localAvg.toFixed(1)
-                    : "New"}
-                </span>
-                <Star className="h-4 w-4 fill-current" aria-hidden="true" />
-              </div>
-              <div>
-                <p className="text-xs font-bold text-[#1C1C1C]">
-                  {ratingSummary.totalShown} Dining Reviews
-                </p>
-                <p className="text-[11px] text-[#696969]">Community Rating</p>
-              </div>
-            </div>
-
-            <div className="flex flex-wrap items-center gap-2">
-              <button
-                type="button"
-                aria-pressed={isSaved}
-                onClick={() => void toggleFavorite(restaurant.id)}
-                className={cn(
-                  "inline-flex min-h-10 items-center gap-1.5 rounded-full border px-4 text-sm font-semibold transition",
-                  isSaved
-                    ? "border-[#E23744] bg-[#E23744] text-white"
-                    : "border-[#E8E8E8] bg-white text-[#1C1C1C] hover:border-[#E23744] hover:text-[#E23744]"
+                {restaurant.is_trending && (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-[#FFB800] px-2.5 py-1 text-xs font-bold text-[#1C1C1C]">
+                    <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />
+                    {t.restaurant.trendingNow}
+                  </span>
                 )}
-              >
-                <Bookmark className={cn("h-4 w-4", isSaved && "fill-current")} aria-hidden="true" />
-                <span>{isSaved ? "Saved" : "Save"}</span>
-              </button>
+                {restaurant.cuisines.map((c) => (
+                  <Link
+                    key={c}
+                    href={`/explore?category=${encodeURIComponent(c)}`}
+                    className="rounded-full border border-[#EEEEEE] bg-white px-2.5 py-1 text-xs font-medium text-[#696969] hover:border-[#E23744] hover:text-[#E23744]"
+                  >
+                    {translateCategory(c, locale)}
+                  </Link>
+                ))}
+              </div>
 
-              <button
-                type="button"
-                onClick={() => setCollectionModalOpen(true)}
-                className="inline-flex min-h-10 items-center gap-1.5 rounded-full border border-[#E8E8E8] bg-white px-4 text-sm font-semibold text-[#1C1C1C] transition hover:border-[#E23744] hover:text-[#E23744]"
-              >
-                <FolderPlus className="h-4 w-4" aria-hidden="true" />
-                <span>Add to List</span>
-              </button>
+              <h1 className="mt-3 font-display text-3xl font-extrabold tracking-tight text-[#1C1C1C] sm:text-4xl">
+                {restaurant.name}
+              </h1>
+              {restaurant.tagline && (
+                <p className="mt-1 text-base font-medium text-[#696969]">
+                  {restaurant.tagline}
+                </p>
+              )}
 
-              <button
-                type="button"
-                onClick={handleShare}
-                className="inline-flex min-h-10 items-center gap-1.5 rounded-full border border-[#E8E8E8] bg-white px-4 text-sm font-semibold text-[#1C1C1C] transition hover:border-[#E23744] hover:text-[#E23744]"
-              >
-                <Share2 className="h-4 w-4" aria-hidden="true" />
-                <span>Share</span>
-              </button>
+              <div className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-[#696969]">
+                <span className="inline-flex items-center gap-1.5">
+                  <MapPin className="h-4 w-4 text-[#E23744]" aria-hidden="true" />
+                  <span>
+                    {restaurant.district}, {restaurant.city}
+                  </span>
+                </span>
+                <span className="inline-flex items-center gap-1.5">
+                  <Clock className="h-4 w-4 text-[#E23744]" aria-hidden="true" />
+                  <span>{restaurant.opening_hours?.mon_fri || "10:00 - 22:00"}</span>
+                </span>
+                <span className="font-semibold text-[#1C1C1C]">
+                  {formatT(t.restaurant.avgPerPerson, {
+                    price: formatIdr(restaurant.average_price_idr),
+                  })}
+                </span>
+              </div>
+            </div>
 
-              <button
-                type="button"
-                aria-label="Report incorrect restaurant details"
-                onClick={() =>
-                  requireSignedIn("report listing issues") &&
-                  setReportTarget({
-                    type: "restaurant",
-                    id: restaurant.id,
-                    label: restaurant.name,
-                  })
-                }
-                className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-[#E8E8E8] bg-white text-[#696969] hover:border-[#E23744] hover:text-[#E23744]"
-              >
-                <Flag className="h-4 w-4" aria-hidden="true" />
-              </button>
+            {/* Right Header Rating + CTAs */}
+            <div className="flex flex-col items-start gap-4 lg:items-end">
+              <div className="flex items-center gap-3 rounded-xl border border-[#EEEEEE] bg-white px-4 py-2.5 shadow-xs">
+                <div className="inline-flex items-center gap-1 rounded-lg bg-[#E23744] px-2.5 py-1 text-base font-bold text-white">
+                  <span>
+                    {ratingSummary.totalShown > 0
+                      ? ratingSummary.localAvg.toFixed(1)
+                      : t.common.newBadge}
+                  </span>
+                  <Star className="h-4 w-4 fill-current" aria-hidden="true" />
+                </div>
+                <div>
+                  <p className="text-xs font-bold text-[#1C1C1C]">
+                    {formatT(t.restaurant.diningReviewsCount, {
+                      count: ratingSummary.totalShown,
+                    })}
+                  </p>
+                  <p className="text-[11px] text-[#696969]">{t.restaurant.communityRating}</p>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  aria-pressed={isSaved}
+                  onClick={() => void toggleFavorite(restaurant.id)}
+                  className={cn(
+                    "inline-flex min-h-10 items-center gap-1.5 rounded-full border px-4 text-sm font-semibold transition",
+                    isSaved
+                      ? "border-[#E23744] bg-[#E23744] text-white"
+                      : "border-[#EEEEEE] bg-white text-[#1C1C1C] hover:border-[#E23744] hover:text-[#E23744]"
+                  )}
+                >
+                  <Bookmark className={cn("h-4 w-4", isSaved && "fill-current")} aria-hidden="true" />
+                  <span>{isSaved ? t.restaurant.savedBtn : t.restaurant.saveBtn}</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setCollectionModalOpen(true)}
+                  className="inline-flex min-h-10 items-center gap-1.5 rounded-full border border-[#EEEEEE] bg-white px-4 text-sm font-semibold text-[#1C1C1C] transition hover:border-[#E23744] hover:text-[#E23744]"
+                >
+                  <FolderPlus className="h-4 w-4" aria-hidden="true" />
+                  <span>{t.restaurant.addToList}</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleShare}
+                  className="inline-flex min-h-10 items-center gap-1.5 rounded-full border border-[#EEEEEE] bg-white px-4 text-sm font-semibold text-[#1C1C1C] transition hover:border-[#E23744] hover:text-[#E23744]"
+                >
+                  <Share2 className="h-4 w-4" aria-hidden="true" />
+                  <span>{t.restaurant.share}</span>
+                </button>
+
+                <button
+                  type="button"
+                  aria-label={t.restaurant.reportIssue}
+                  onClick={() =>
+                    requireSignedIn("report listing issues") &&
+                    setReportTarget({
+                      type: "restaurant",
+                      id: restaurant.id,
+                      label: restaurant.name,
+                    })
+                  }
+                  className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-[#EEEEEE] bg-white text-[#696969] hover:border-[#E23744] hover:text-[#E23744]"
+                >
+                  <Flag className="h-4 w-4" aria-hidden="true" />
+                </button>
+              </div>
             </div>
           </div>
-        </div>
 
-        {/* Navigation Tabs */}
-        <div
-          role="tablist"
-          aria-label="Restaurant sections"
-          className="craver-tablist mt-2"
-        >
-          {TABS.map((tab, idx) => {
-            const selected = activeTab === tab.key;
-            const countSuffix =
-              tab.key === "menu" && items.length > 0
-                ? ` (${items.length})`
-                : tab.key === "reviews" && publishedReviews.length > 0
-                  ? ` (${publishedReviews.length})`
-                  : tab.key === "photos" && galleryPhotos.length > 0
-                    ? ` (${galleryPhotos.length})`
-                    : "";
+          {/* Navigation Tabs */}
+          <div
+            role="tablist"
+            aria-label={t.restaurant.sectionsAria}
+            className="craver-tablist mt-2"
+          >
+            {tabs.map((tab, idx) => {
+              const selected = activeTab === tab.key;
+              const countSuffix =
+                tab.key === "menu" && items.length > 0
+                  ? ` (${items.length})`
+                  : tab.key === "reviews" && publishedReviews.length > 0
+                    ? ` (${publishedReviews.length})`
+                    : tab.key === "photos" && galleryPhotos.length > 0
+                      ? ` (${galleryPhotos.length})`
+                      : "";
 
-            return (
-              <button
-                key={tab.key}
-                ref={(el) => {
-                  tabRefs.current[tab.key] = el;
-                }}
-                type="button"
-                role="tab"
-                id={`tab-${tab.key}`}
-                aria-selected={selected}
-                tabIndex={selected ? 0 : -1}
-                onClick={() => selectTab(tab.key)}
-                onKeyDown={(e) => {
-                  let targetIdx = idx;
-                  if (e.key === "ArrowRight") targetIdx = (idx + 1) % TABS.length;
-                  else if (e.key === "ArrowLeft")
-                    targetIdx = (idx - 1 + TABS.length) % TABS.length;
-                  else if (e.key === "Home") targetIdx = 0;
-                  else if (e.key === "End") targetIdx = TABS.length - 1;
-                  else return;
-                  e.preventDefault();
-                  const nextKey = TABS[targetIdx].key;
-                  selectTab(nextKey);
-                  tabRefs.current[nextKey]?.focus();
-                }}
-                className="text-sm whitespace-nowrap"
-              >
-                {tab.label}
-                {countSuffix}
-              </button>
-            );
-          })}
+              return (
+                <button
+                  key={tab.key}
+                  ref={(el) => {
+                    tabRefs.current[tab.key] = el;
+                  }}
+                  type="button"
+                  role="tab"
+                  id={`tab-${tab.key}`}
+                  aria-selected={selected}
+                  tabIndex={selected ? 0 : -1}
+                  onClick={() => selectTab(tab.key)}
+                  onKeyDown={(e) => {
+                    let targetIdx = idx;
+                    if (e.key === "ArrowRight") targetIdx = (idx + 1) % tabs.length;
+                    else if (e.key === "ArrowLeft")
+                      targetIdx = (idx - 1 + tabs.length) % tabs.length;
+                    else if (e.key === "Home") targetIdx = 0;
+                    else if (e.key === "End") targetIdx = tabs.length - 1;
+                    else return;
+                    e.preventDefault();
+                    const nextKey = tabs[targetIdx].key;
+                    selectTab(nextKey);
+                    tabRefs.current[nextKey]?.focus();
+                  }}
+                  className="text-sm whitespace-nowrap"
+                >
+                  {tab.label}
+                  {countSuffix}
+                </button>
+              );
+            })}
+          </div>
         </div>
       </section>
 
@@ -1092,7 +1104,7 @@ export function RestaurantDetailClient({
             <div className="space-y-8 lg:col-span-8">
               <div>
                 <h2 className="font-display text-xl font-bold text-[#1C1C1C]">
-                  About {restaurant.name}
+                  {formatT(t.restaurant.aboutHeading, { name: restaurant.name })}
                 </h2>
                 <p className="mt-3 text-sm leading-relaxed text-[#1C1C1C] sm:text-base">
                   {restaurant.description}
@@ -1104,14 +1116,14 @@ export function RestaurantDetailClient({
                 <div>
                   <div className="flex items-center justify-between">
                     <h3 className="font-display text-lg font-bold text-[#1C1C1C]">
-                      Community Favorite Dishes
+                      {t.restaurant.communityFavDishes}
                     </h3>
                     <button
                       type="button"
                       onClick={() => selectTab("menu")}
                       className="text-xs font-semibold text-[#E23744] hover:underline"
                     >
-                      Open full menu →
+                      {t.restaurant.openFullMenu}
                     </button>
                   </div>
                   <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -1121,7 +1133,7 @@ export function RestaurantDetailClient({
                       .map((dish) => (
                         <div
                           key={dish.id}
-                          className="flex items-center gap-3.5 rounded-xl border border-[#E8E8E8] p-3"
+                          className="flex items-center gap-3.5 rounded-xl border border-[#EEEEEE] p-3"
                         >
                           <img
                             src={dish.photo_url || "/images/dish-nasi-goreng.jpg"}
@@ -1145,9 +1157,9 @@ export function RestaurantDetailClient({
 
             {/* Right Sidebar Info Card */}
             <aside className="space-y-5 lg:col-span-4">
-              <div className="rounded-2xl border border-[#E8E8E8] bg-[#FAFAFA] p-6 space-y-4">
+              <div className="rounded-2xl border border-[#EEEEEE] bg-[#FFF6E9]/55 p-6 space-y-4">
                 <h3 className="font-display text-base font-bold text-[#1C1C1C]">
-                  Location &amp; Contact
+                  {t.restaurant.locationContact}
                 </h3>
                 <div className="space-y-3 text-sm text-[#1C1C1C]">
                   <p className="flex items-start gap-2.5">
@@ -1157,8 +1169,12 @@ export function RestaurantDetailClient({
                   <div className="flex items-start gap-2.5">
                     <Clock className="mt-0.5 h-4 w-4 shrink-0 text-[#E23744]" aria-hidden="true" />
                     <div className="space-y-0.5 text-xs sm:text-sm">
-                      <p>Mon–Fri: {restaurant.opening_hours?.mon_fri || "10:00 - 22:00"}</p>
-                      <p>Sat–Sun: {restaurant.opening_hours?.sat_sun || "10:00 - 23:00"}</p>
+                      <p>
+                        {t.restaurant.monFri}: {restaurant.opening_hours?.mon_fri || "10:00 - 22:00"}
+                      </p>
+                      <p>
+                        {t.restaurant.satSun}: {restaurant.opening_hours?.sat_sun || "10:00 - 23:00"}
+                      </p>
                       {restaurant.opening_hours?.notes && (
                         <p className="text-xs text-[#696969]">
                           {restaurant.opening_hours.notes}
@@ -1203,13 +1219,13 @@ export function RestaurantDetailClient({
                   )}
                 </div>
 
-                <div className="border-t border-[#E8E8E8] pt-4">
+                <div className="border-t border-[#EEEEEE] pt-4">
                   <button
                     type="button"
                     onClick={() => selectTab("updates")}
-                    className="w-full rounded-lg border border-[#E8E8E8] bg-white px-4 py-2 text-xs font-semibold text-[#1C1C1C] hover:border-[#E23744] hover:text-[#E23744]"
+                    className="w-full rounded-lg border border-[#EEEEEE] bg-white px-4 py-2 text-xs font-semibold text-[#1C1C1C] hover:border-[#E23744] hover:text-[#E23744]"
                   >
-                    Suggest an Info or Hours Correction
+                    {t.restaurant.suggestCorrection}
                   </button>
                 </div>
               </div>
@@ -1231,11 +1247,9 @@ export function RestaurantDetailClient({
             <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
               <div>
                 <h2 className="font-display text-2xl font-bold text-[#1C1C1C]">
-                  Digital Food &amp; Beverage Menu
+                  {t.restaurant.menuHeading}
                 </h2>
-                <p className="mt-1 text-sm text-[#696969]">
-                  Browse dishes organized by course or contribute missing menu items.
-                </p>
+                <p className="mt-1 text-sm text-[#696969]">{t.restaurant.digitalMenuSub}</p>
               </div>
               <div className="flex flex-wrap gap-2">
                 <button
@@ -1247,7 +1261,7 @@ export function RestaurantDetailClient({
                   className="inline-flex min-h-10 items-center gap-1.5 rounded-lg border border-[#E8E8E8] bg-white px-3.5 text-xs font-semibold text-[#1C1C1C] hover:border-[#E23744] hover:text-[#E23744]"
                 >
                   <Plus className="h-3.5 w-3.5" aria-hidden="true" />
-                  <span>Add Category</span>
+                  <span>{t.restaurant.addCategory}</span>
                 </button>
                 <button
                   type="button"
@@ -1255,7 +1269,7 @@ export function RestaurantDetailClient({
                   className="inline-flex min-h-10 items-center gap-1.5 rounded-lg bg-[#E23744] px-4 text-xs font-semibold text-white hover:bg-[#C91D2B]"
                 >
                   <Plus className="h-3.5 w-3.5" aria-hidden="true" />
-                  <span>Add Dish</span>
+                  <span>{t.restaurant.addDish}</span>
                 </button>
               </div>
             </div>
@@ -1273,7 +1287,7 @@ export function RestaurantDetailClient({
                       : "border border-[#E8E8E8] bg-[#FAFAFA] text-[#696969] hover:text-[#1C1C1C]"
                   )}
                 >
-                  All Sections ({items.length})
+                  {t.restaurant.allSections} ({items.length})
                 </button>
                 {sortedCategories.map((cat) => (
                   <button
@@ -1288,7 +1302,7 @@ export function RestaurantDetailClient({
                     )}
                   >
                     {cat.name} ({itemsByCategory.get(cat.id)?.length ?? 0})
-                    {cat.status !== "approved" && ` · ${cat.status}`}
+                    {cat.status !== "approved" && ` · ${getStatusLabel(cat.status)}`}
                   </button>
                 ))}
               </div>
@@ -1302,12 +1316,12 @@ export function RestaurantDetailClient({
               >
                 <div className="flex items-center justify-between">
                   <h3 className="font-display text-base font-bold text-[#1C1C1C]">
-                    Add Menu Category
+                    {t.restaurant.addCategoryTitle}
                   </h3>
                   <button
                     type="button"
                     onClick={() => setShowAddCategory(false)}
-                    aria-label="Close category form"
+                    aria-label={t.common.close}
                   >
                     <X className="h-4 w-4 text-[#696969]" />
                   </button>
@@ -1318,7 +1332,7 @@ export function RestaurantDetailClient({
                       htmlFor="menu-cat-name"
                       className="block text-xs font-semibold text-[#1C1C1C]"
                     >
-                      Category Name
+                      {t.restaurant.categoryNameLabel}
                     </label>
                     <input
                       id="menu-cat-name"
@@ -1339,13 +1353,13 @@ export function RestaurantDetailClient({
                       htmlFor="menu-cat-desc"
                       className="block text-xs font-semibold text-[#1C1C1C]"
                     >
-                      Short Description
+                      {t.restaurant.shortDescLabel}
                     </label>
                     <input
                       id="menu-cat-desc"
                       value={newCategoryDesc}
                       onChange={(e) => setNewCategoryDesc(e.target.value)}
-                      placeholder="e.g. Slow-brewed single-origin drinks"
+                      placeholder={t.restaurant.shortDescPlaceholder}
                       className="mt-1 min-h-11 w-full rounded-lg border border-[#E8E8E8] bg-white px-3 text-sm"
                     />
                   </div>
@@ -1355,7 +1369,7 @@ export function RestaurantDetailClient({
                     type="submit"
                     className="rounded-lg bg-[#E23744] px-4 py-2 text-xs font-semibold text-white hover:bg-[#C91D2B]"
                   >
-                    Save Category
+                    {t.restaurant.saveCategoryBtn}
                   </button>
                 </div>
               </form>
@@ -1369,7 +1383,9 @@ export function RestaurantDetailClient({
               >
                 <div className="flex items-center justify-between">
                   <h3 className="font-display text-lg font-bold text-[#1C1C1C]">
-                    {editingDish ? `Edit "${editingDish.name}"` : "Add Menu Dish"}
+                    {editingDish
+                      ? formatT(t.restaurant.editDishPrefix, { name: editingDish.name })
+                      : t.restaurant.addMenuDishTitle}
                   </h3>
                   <button
                     type="button"
@@ -1377,7 +1393,7 @@ export function RestaurantDetailClient({
                       setShowDishForm(false);
                       setEditingDish(null);
                     }}
-                    aria-label="Close dish form"
+                    aria-label={t.common.close}
                   >
                     <X className="h-4 w-4 text-[#696969]" />
                   </button>
@@ -1386,7 +1402,7 @@ export function RestaurantDetailClient({
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
                   <div>
                     <label htmlFor="dish-cat" className="block text-xs font-semibold">
-                      Category *
+                      {t.restaurant.dishCategoryLabel}
                     </label>
                     <select
                       id="dish-cat"
@@ -1405,14 +1421,14 @@ export function RestaurantDetailClient({
 
                   <div>
                     <label htmlFor="dish-name" className="block text-xs font-semibold">
-                      Dish Name *
+                      {t.restaurant.dishNameRequired}
                     </label>
                     <input
                       id="dish-name"
                       type="text"
                       value={dishName}
                       onChange={(e) => setDishName(e.target.value)}
-                      placeholder="e.g. Truffle Gyudon"
+                      placeholder="Truffle Gyudon"
                       required
                       minLength={2}
                       className="mt-1 min-h-11 w-full rounded-lg border border-[#E8E8E8] bg-white px-3 text-sm"
@@ -1421,7 +1437,7 @@ export function RestaurantDetailClient({
 
                   <div>
                     <label htmlFor="dish-price" className="block text-xs font-semibold">
-                      Price (IDR) *
+                      {t.restaurant.dishPriceRequired}
                     </label>
                     <input
                       id="dish-price"
@@ -1438,14 +1454,14 @@ export function RestaurantDetailClient({
 
                 <div>
                   <label htmlFor="dish-desc" className="block text-xs font-semibold">
-                    Description
+                    {t.restaurant.dishDescLabel}
                   </label>
                   <textarea
                     id="dish-desc"
                     rows={2}
                     value={dishDescription}
                     onChange={(e) => setDishDescription(e.target.value)}
-                    placeholder="Key ingredients, portion note, or preparation style..."
+                    placeholder={t.restaurant.dishDescPlaceholder}
                     className="mt-1 w-full rounded-lg border border-[#E8E8E8] bg-white p-3 text-sm"
                   />
                 </div>
@@ -1459,7 +1475,7 @@ export function RestaurantDetailClient({
                         onChange={(e) => setDishPopular(e.target.checked)}
                         className="accent-[#E23744]"
                       />
-                      <span>Popular / Best Seller badge</span>
+                      <span>{t.restaurant.popularBadgeLabel}</span>
                     </label>
                     <label className="inline-flex items-center gap-2">
                       <input
@@ -1468,11 +1484,13 @@ export function RestaurantDetailClient({
                         onChange={(e) => setDishAvailable(e.target.checked)}
                         className="accent-[#E23744]"
                       />
-                      <span>Available on menu</span>
+                      <span>{t.restaurant.availableOnMenu}</span>
                     </label>
                     <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-[#E8E8E8] bg-white px-3 py-1.5 text-xs font-semibold hover:border-[#E23744]">
                       <Upload className="h-3.5 w-3.5 text-[#E23744]" aria-hidden="true" />
-                      <span>{dishPhotoUrl ? "Replace Photo" : "Upload Food Photo"}</span>
+                      <span>
+                        {dishPhotoUrl ? t.restaurant.replacePhoto : t.restaurant.uploadFoodPhoto}
+                      </span>
                       <input
                         type="file"
                         accept="image/jpeg,image/png,image/webp,image/avif"
@@ -1483,7 +1501,7 @@ export function RestaurantDetailClient({
                     {dishPhotoUrl && (
                       <img
                         src={dishPhotoUrl}
-                        alt="Uploaded dish preview"
+                        alt={dishName || t.restaurant.uploadFoodPhoto}
                         className="h-10 w-10 rounded-lg object-cover border border-[#E8E8E8]"
                       />
                     )}
@@ -1494,7 +1512,11 @@ export function RestaurantDetailClient({
                     disabled={dishBusy}
                     className="min-h-11 rounded-lg bg-[#E23744] px-5 text-sm font-semibold text-white hover:bg-[#C91D2B] disabled:opacity-60"
                   >
-                    {dishBusy ? "Saving..." : editingDish ? "Update Dish" : "Save Dish"}
+                    {dishBusy
+                      ? t.common.saving
+                      : editingDish
+                        ? t.restaurant.updateDishBtn
+                        : t.restaurant.saveDishBtn}
                   </button>
                 </div>
               </form>
@@ -1504,11 +1526,9 @@ export function RestaurantDetailClient({
             {sortedCategories.length === 0 ? (
               <div className="rounded-2xl border border-[#E8E8E8] bg-[#FAFAFA] p-10 text-center">
                 <p className="font-display text-lg font-bold text-[#1C1C1C]">
-                  No digital menu cataloged yet
+                  {t.restaurant.noMenuYet}
                 </p>
-                <p className="mt-1 text-sm text-[#696969]">
-                  Help diners by creating a section like Best Sellers or Main Course.
-                </p>
+                <p className="mt-1 text-sm text-[#696969]">{t.restaurant.noMenuSub}</p>
               </div>
             ) : (
               <div className="space-y-10">
@@ -1528,7 +1548,7 @@ export function RestaurantDetailClient({
                               </h3>
                               {cat.status !== "approved" && (
                                 <span className="rounded-full bg-[#FFF0F1] px-2 py-0.5 text-[11px] font-semibold text-[#C91D2B]">
-                                  {cat.status}
+                                  {getStatusLabel(cat.status)}
                                 </span>
                               )}
                             </div>
@@ -1541,14 +1561,12 @@ export function RestaurantDetailClient({
                             onClick={() => openAddDish(cat.id)}
                             className="text-xs font-semibold text-[#E23744] hover:underline"
                           >
-                            + Add dish here
+                            {t.restaurant.addDishHere}
                           </button>
                         </div>
 
                         {catItems.length === 0 ? (
-                          <p className="text-sm text-[#696969]">
-                            No items in this category yet.
-                          </p>
+                          <p className="text-sm text-[#696969]">{t.restaurant.noItemsInCat}</p>
                         ) : (
                           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                             {catItems.map((item) => {
@@ -1579,17 +1597,17 @@ export function RestaurantDetailClient({
                                         {item.is_popular && (
                                           <span className="inline-flex items-center gap-1 rounded bg-[#FFF0F1] px-1.5 py-0.5 text-[10px] font-bold uppercase text-[#E23744]">
                                             <Sparkles className="h-2.5 w-2.5" aria-hidden="true" />
-                                            Best Seller
+                                            {t.restaurant.bestSeller}
                                           </span>
                                         )}
                                         {item.status !== "approved" && (
                                           <span className="rounded bg-[#FAFAFA] border border-[#E8E8E8] px-1.5 py-0.5 text-[10px] font-semibold text-[#696969]">
-                                            {item.status}
+                                            {getStatusLabel(item.status)}
                                           </span>
                                         )}
                                         {!item.is_available && (
                                           <span className="rounded bg-[#FAFAFA] px-1.5 py-0.5 text-[10px] font-semibold text-[#696969]">
-                                            Unavailable
+                                            {t.restaurant.unavailable}
                                           </span>
                                         )}
                                       </div>
@@ -1610,7 +1628,7 @@ export function RestaurantDetailClient({
                                           <button
                                             type="button"
                                             onClick={() => openEditDish(item)}
-                                            aria-label={`Edit ${item.name}`}
+                                            aria-label={`${t.common.edit} ${item.name}`}
                                             className="rounded p-1 text-[#696969] hover:bg-[#FAFAFA] hover:text-[#1C1C1C]"
                                           >
                                             <Edit3 className="h-3.5 w-3.5" aria-hidden="true" />
@@ -1618,7 +1636,7 @@ export function RestaurantDetailClient({
                                           <button
                                             type="button"
                                             onClick={() => requestDeleteDish(item)}
-                                            aria-label={`Delete ${item.name}`}
+                                            aria-label={`${t.common.delete} ${item.name}`}
                                             className="rounded p-1 text-[#696969] hover:bg-[#FFF0F1] hover:text-[#C91D2B]"
                                           >
                                             <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
@@ -1664,10 +1682,12 @@ export function RestaurantDetailClient({
                   </div>
                   <div>
                     <h2 className="font-display text-lg font-bold text-[#1C1C1C]">
-                      Overall Rating
+                      {t.restaurant.overallRating}
                     </h2>
                     <p className="text-xs text-[#696969]">
-                      Based on {ratingSummary.totalShown} dining experiences
+                      {formatT(t.restaurant.basedOnExperiences, {
+                        count: ratingSummary.totalShown,
+                      })}
                     </p>
                   </div>
                 </div>
@@ -1700,23 +1720,25 @@ export function RestaurantDetailClient({
               {/* Single-Review Create/Edit Composer */}
               <div className="rounded-2xl border border-[#E8E8E8] bg-white p-6">
                 <h3 className="font-display text-lg font-bold text-[#1C1C1C]">
-                  {existingUserReview ? "Update Your Review" : "Share Your Experience"}
+                  {existingUserReview
+                    ? t.restaurant.editReviewTitle
+                    : t.restaurant.writeReviewTitle}
                 </h3>
                 {!user ? (
                   <div className="mt-3 rounded-xl bg-[#FAFAFA] p-4 text-sm text-[#696969]">
-                    <p>Sign in to rate dishes, attach food photography, and post a review.</p>
+                    <p>{t.restaurant.signInToReview}</p>
                     <Link
                       href={`/auth/login?next=${encodeURIComponent(`/restaurants/${restaurant.slug}?tab=reviews`)}`}
                       className="mt-3 inline-flex rounded-lg bg-[#E23744] px-4 py-2 text-xs font-semibold text-white hover:bg-[#C91D2B]"
                     >
-                      Sign In to Review
+                      {t.restaurant.signInReviewBtn}
                     </Link>
                   </div>
                 ) : (
                   <form onSubmit={handleSaveReview} className="mt-4 space-y-4">
                     <fieldset>
                       <legend className="text-xs font-semibold text-[#1C1C1C]">
-                        Your Rating *
+                        {t.restaurant.ratingLabel}
                       </legend>
                       <div className="mt-2 flex gap-2">
                         {[1, 2, 3, 4, 5].map((star) => (
@@ -1746,28 +1768,28 @@ export function RestaurantDetailClient({
 
                     <div>
                       <label htmlFor="review-title" className="block text-xs font-semibold">
-                        Headline (optional)
+                        {t.restaurant.reviewHeadline}
                       </label>
                       <input
                         id="review-title"
                         type="text"
                         value={reviewTitle}
                         onChange={(e) => setReviewTitle(e.target.value)}
-                        placeholder="e.g. Memorable charred flavor and calm courtyard"
+                        placeholder={t.restaurant.headlinePlaceholder}
                         className="mt-1 min-h-11 w-full rounded-lg border border-[#E8E8E8] px-3 text-sm"
                       />
                     </div>
 
                     <div>
                       <label htmlFor="review-comment" className="block text-xs font-semibold">
-                        Review *
+                        {t.restaurant.reviewComment}
                       </label>
                       <textarea
                         id="review-comment"
                         rows={4}
                         value={reviewComment}
                         onChange={(e) => setReviewComment(e.target.value)}
-                        placeholder="What did you order? How were the textures, atmosphere, and pacing?"
+                        placeholder={t.restaurant.commentPlaceholder}
                         minLength={10}
                         required
                         className="mt-1 w-full rounded-lg border border-[#E8E8E8] p-3 text-sm"
@@ -1777,7 +1799,7 @@ export function RestaurantDetailClient({
                     <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                       <div>
                         <label htmlFor="review-date" className="block text-xs font-semibold">
-                          Visit Date
+                          {t.restaurant.visitDate}
                         </label>
                         <input
                           id="review-date"
@@ -1792,7 +1814,9 @@ export function RestaurantDetailClient({
                         <label className="inline-flex min-h-11 w-full cursor-pointer items-center justify-center gap-1.5 rounded-lg border border-[#E8E8E8] bg-[#FAFAFA] px-3 text-xs font-semibold text-[#1C1C1C] hover:border-[#E23744]">
                           <Camera className="h-4 w-4 text-[#E23744]" aria-hidden="true" />
                           <span>
-                            {uploadingReviewPhoto ? "Uploading..." : "Attach Food Photo"}
+                            {uploadingReviewPhoto
+                              ? t.restaurant.uploading
+                              : t.restaurant.attachFoodPhoto}
                           </span>
                           <input
                             type="file"
@@ -1813,12 +1837,12 @@ export function RestaurantDetailClient({
                           <div key={url} className="relative">
                             <img
                               src={url}
-                              alt={`Review attachment ${idx + 1}`}
+                              alt={`${t.restaurant.attachFoodPhoto} ${idx + 1}`}
                               className="h-14 w-14 rounded-lg object-cover border border-[#E8E8E8]"
                             />
                             <button
                               type="button"
-                              aria-label="Remove attached photo"
+                              aria-label={t.common.delete}
                               onClick={() =>
                                 setReviewPhotos((prev) => prev.filter((u) => u !== url))
                               }
@@ -1838,7 +1862,7 @@ export function RestaurantDetailClient({
                           onClick={() => requestDeleteReview(existingUserReview)}
                           className="text-xs font-semibold text-[#C91D2B] hover:underline"
                         >
-                          Delete Review
+                          {t.restaurant.deleteReview}
                         </button>
                       )}
                       <button
@@ -1847,10 +1871,10 @@ export function RestaurantDetailClient({
                         className="ml-auto min-h-11 rounded-lg bg-[#E23744] px-5 text-sm font-semibold text-white hover:bg-[#C91D2B] disabled:opacity-60"
                       >
                         {reviewBusy
-                          ? "Saving..."
+                          ? t.common.saving
                           : existingUserReview
-                            ? "Update Review"
-                            : "Post Review"}
+                            ? t.restaurant.updateReview
+                            : t.restaurant.publishReview}
                       </button>
                     </div>
                   </form>
@@ -1862,7 +1886,7 @@ export function RestaurantDetailClient({
             <div className="space-y-4 lg:col-span-7">
               {publishedReviews.length === 0 ? (
                 <div className="rounded-2xl border border-[#E8E8E8] bg-[#FAFAFA] p-10 text-center text-sm text-[#696969]">
-                  No written community reviews yet. Share the first review for {restaurant.name}.
+                  {formatT(t.restaurant.noReviewsYet, { name: restaurant.name })}
                 </div>
               ) : (
                 publishedReviews.map((rev) => (
@@ -1885,10 +1909,10 @@ export function RestaurantDetailClient({
                         )}
                         <div>
                           <p className="text-sm font-bold text-[#1C1C1C]">
-                            {rev.profile?.full_name || "Community Diner"}
+                            {rev.profile?.full_name || t.restaurant.dinerFallback}
                           </p>
                           <p className="text-xs text-[#696969]">
-                            {formatDate(rev.visit_date || rev.created_at)}
+                            {formatDate(rev.visit_date || rev.created_at, locale)}
                           </p>
                         </div>
                       </div>
@@ -1900,13 +1924,13 @@ export function RestaurantDetailClient({
                         </span>
                         <button
                           type="button"
-                          aria-label="Report review"
+                          aria-label={t.restaurant.reportTitle}
                           onClick={() =>
                             requireSignedIn("report reviews") &&
                             setReportTarget({
                               type: "review",
                               id: rev.id,
-                              label: rev.title || "Community review",
+                              label: rev.title || t.restaurant.dinerFallback,
                             })
                           }
                           className="rounded p-1 text-[#696969] hover:text-[#E23744]"
@@ -1931,7 +1955,7 @@ export function RestaurantDetailClient({
                           <img
                             key={url}
                             src={url}
-                            alt="Dish from diner review"
+                            alt={rev.title || restaurant.name}
                             className="h-24 w-24 rounded-xl object-cover border border-[#E8E8E8]"
                           />
                         ))}
@@ -1958,17 +1982,15 @@ export function RestaurantDetailClient({
             <div className="flex flex-col justify-between gap-4 rounded-2xl border border-[#E8E8E8] bg-[#FAFAFA] p-5 lg:flex-row lg:items-end">
               <div>
                 <h2 className="font-display text-xl font-bold text-[#1C1C1C]">
-                  Food &amp; Dining Gallery
+                  {t.restaurant.foodGalleryTitle}
                 </h2>
-                <p className="mt-1 text-sm text-[#696969]">
-                  High-resolution plates, interiors, and menu shots contributed by diners.
-                </p>
+                <p className="mt-1 text-sm text-[#696969]">{t.restaurant.foodGallerySub}</p>
               </div>
 
               <div className="flex flex-wrap items-end gap-2">
                 <div>
                   <label htmlFor="gallery-type" className="block text-xs font-semibold">
-                    Category
+                    {t.restaurant.photoCatLabel}
                   </label>
                   <select
                     id="gallery-type"
@@ -1978,27 +2000,29 @@ export function RestaurantDetailClient({
                     }
                     className="mt-1 min-h-10 rounded-lg border border-[#E8E8E8] bg-white px-3 text-xs font-medium"
                   >
-                    <option value="food">Food Plate</option>
-                    <option value="gallery">Interior / Ambience</option>
-                    <option value="menu">Printed Menu Page</option>
+                    <option value="food">{t.restaurant.photoCategories.food}</option>
+                    <option value="gallery">{t.restaurant.photoCategories.gallery}</option>
+                    <option value="menu">{t.restaurant.photoCategories.menu}</option>
                   </select>
                 </div>
                 <div>
                   <label htmlFor="gallery-caption" className="block text-xs font-semibold">
-                    Caption
+                    {t.restaurant.photoCaptionLabel}
                   </label>
                   <input
                     id="gallery-caption"
                     type="text"
                     value={photoCaption}
                     onChange={(e) => setPhotoCaption(e.target.value)}
-                    placeholder="Optional caption"
+                    placeholder={t.restaurant.photoCaptionPlaceholder}
                     className="mt-1 min-h-10 rounded-lg border border-[#E8E8E8] bg-white px-3 text-xs"
                   />
                 </div>
                 <label className="inline-flex min-h-10 cursor-pointer items-center gap-1.5 rounded-lg bg-[#E23744] px-4 text-xs font-semibold text-white hover:bg-[#C91D2B]">
                   <Upload className="h-3.5 w-3.5" aria-hidden="true" />
-                  <span>{photoUploading ? "Uploading..." : "Upload Photo"}</span>
+                  <span>
+                    {photoUploading ? t.restaurant.uploading : t.restaurant.uploadPhotoBtn}
+                  </span>
                   <input
                     type="file"
                     accept="image/jpeg,image/png,image/webp,image/avif"
@@ -2015,6 +2039,10 @@ export function RestaurantDetailClient({
                 const canDelete =
                   photo.id !== "cover-hero" &&
                   (isAdmin || (user && photo.user_id === user.id));
+                const photoLabel =
+                  t.restaurant.photoCategories[
+                    photo.photo_type as keyof typeof t.restaurant.photoCategories
+                  ] ?? photo.photo_type;
                 return (
                   <figure
                     key={photo.id}
@@ -2035,7 +2063,7 @@ export function RestaurantDetailClient({
                     {canDelete && (
                       <button
                         type="button"
-                        aria-label="Delete photo"
+                        aria-label={t.common.delete}
                         onClick={() => requestDeletePhoto(photo)}
                         className="absolute right-2.5 top-2.5 rounded-full bg-white/95 p-1.5 text-[#C91D2B] shadow-xs hover:bg-[#FFF0F1]"
                       >
@@ -2047,7 +2075,7 @@ export function RestaurantDetailClient({
                         {photo.caption || restaurant.name}
                       </span>
                       <span className="shrink-0 rounded bg-[#FAFAFA] px-2 py-0.5 text-[10px] font-semibold uppercase text-[#696969]">
-                        {photo.photo_type}
+                        {photoLabel}
                       </span>
                     </figcaption>
                   </figure>
@@ -2070,12 +2098,12 @@ export function RestaurantDetailClient({
           <div className="grid grid-cols-1 gap-8 lg:grid-cols-12">
             <div className="space-y-4 lg:col-span-7">
               <h2 className="font-display text-xl font-bold text-[#1C1C1C]">
-                Restaurant Announcements &amp; Hours Updates
+                {t.restaurant.updatesHeading}
               </h2>
 
               {updates.length === 0 ? (
                 <div className="rounded-2xl border border-[#E8E8E8] bg-[#FAFAFA] p-8 text-center text-sm text-[#696969]">
-                  No announcements or verified changes recorded yet.
+                  {t.restaurant.noUpdatesRecorded}
                 </div>
               ) : (
                 <div className="space-y-3">
@@ -2086,11 +2114,13 @@ export function RestaurantDetailClient({
                     >
                       <div className="flex flex-wrap items-center justify-between gap-2">
                         <span className="rounded-full bg-[#FFF0F1] px-2.5 py-1 text-[11px] font-semibold uppercase text-[#C91D2B]">
-                          {upd.update_type.replace("_", " ")}
+                          {t.restaurant.updateTypes[
+                            upd.update_type as keyof typeof t.restaurant.updateTypes
+                          ] ?? upd.update_type.replace("_", " ")}
                         </span>
                         <span className="text-xs text-[#696969]">
-                          {formatDate(upd.created_at)}
-                          {upd.status !== "approved" && ` · Pending moderation`}
+                          {formatDate(upd.created_at, locale)}
+                          {upd.status !== "approved" && ` · ${t.restaurant.pendingModeration}`}
                         </span>
                       </div>
                       <h3 className="mt-2 font-display text-base font-bold text-[#1C1C1C]">
@@ -2109,15 +2139,13 @@ export function RestaurantDetailClient({
                 className="rounded-2xl border border-[#E8E8E8] bg-[#FAFAFA] p-6 space-y-4"
               >
                 <h3 className="font-display text-lg font-bold text-[#1C1C1C]">
-                  Submit Restaurant Update
+                  {t.restaurant.submitUpdateTitle}
                 </h3>
-                <p className="text-xs text-[#696969]">
-                  Spotted new opening hours, a seasonal menu launch, or a phone correction?
-                </p>
+                <p className="text-xs text-[#696969]">{t.restaurant.submitUpdateSub}</p>
 
                 <div>
                   <label htmlFor="upd-type" className="block text-xs font-semibold">
-                    Update Category
+                    {t.restaurant.updateType}
                   </label>
                   <select
                     id="upd-type"
@@ -2134,24 +2162,28 @@ export function RestaurantDetailClient({
                     }
                     className="mt-1 min-h-11 w-full rounded-lg border border-[#E8E8E8] bg-white px-3 text-sm"
                   >
-                    <option value="info_correction">Info Correction</option>
-                    <option value="hours">Opening Hours Change</option>
-                    <option value="menu_update">Menu Addition / Price Change</option>
-                    <option value="announcement">Seasonal Announcement</option>
-                    <option value="closure_report">Permanent Closure Report</option>
+                    <option value="info_correction">
+                      {t.restaurant.updateTypes.info_correction}
+                    </option>
+                    <option value="hours">{t.restaurant.updateTypes.hours}</option>
+                    <option value="menu_update">{t.restaurant.updateTypes.menu_update}</option>
+                    <option value="announcement">{t.restaurant.updateTypes.announcement}</option>
+                    <option value="closure_report">
+                      {t.restaurant.updateTypes.closure_report}
+                    </option>
                   </select>
                 </div>
 
                 <div>
                   <label htmlFor="upd-title" className="block text-xs font-semibold">
-                    Summary Title *
+                    {t.restaurant.summaryTitleLabel}
                   </label>
                   <input
                     id="upd-title"
                     type="text"
                     value={updateTitle}
                     onChange={(e) => setUpdateTitle(e.target.value)}
-                    placeholder="e.g. Updated Saturday hours till 23:30"
+                    placeholder={t.restaurant.summaryTitlePlaceholder}
                     required
                     minLength={3}
                     className="mt-1 min-h-11 w-full rounded-lg border border-[#E8E8E8] bg-white px-3 text-sm"
@@ -2160,14 +2192,14 @@ export function RestaurantDetailClient({
 
                 <div>
                   <label htmlFor="upd-notes" className="block text-xs font-semibold">
-                    Details *
+                    {t.restaurant.detailsLabel}
                   </label>
                   <textarea
                     id="upd-notes"
                     rows={3}
                     value={updateNotes}
                     onChange={(e) => setUpdateNotes(e.target.value)}
-                    placeholder="Provide details so moderators can verify quickly..."
+                    placeholder={t.restaurant.detailsPlaceholder}
                     required
                     minLength={5}
                     className="mt-1 w-full rounded-lg border border-[#E8E8E8] bg-white p-3 text-sm"
@@ -2179,7 +2211,7 @@ export function RestaurantDetailClient({
                   disabled={updateBusy}
                   className="min-h-11 w-full rounded-lg bg-[#E23744] px-4 text-sm font-semibold text-white hover:bg-[#C91D2B] disabled:opacity-60"
                 >
-                  {updateBusy ? "Submitting..." : "Submit Update"}
+                  {updateBusy ? t.common.submitting : t.restaurant.submitUpdateBtn}
                 </button>
               </form>
             </div>
@@ -2210,7 +2242,7 @@ export function RestaurantDetailClient({
               <button
                 type="button"
                 onClick={() => lightboxRef.current?.close()}
-                aria-label="Close photo lightbox"
+                aria-label={t.common.close}
                 className="rounded-lg p-1.5 text-[#696969] hover:bg-[#FAFAFA] hover:text-[#1C1C1C]"
               >
                 <X className="h-5 w-5" aria-hidden="true" />
@@ -2237,53 +2269,52 @@ export function RestaurantDetailClient({
             <div className="flex items-center gap-2">
               <AlertTriangle className="h-5 w-5 text-[#E23744]" aria-hidden="true" />
               <h2 id={reportTitleId} className="font-display text-lg font-bold text-[#1C1C1C]">
-                Report Content
+                {t.restaurant.reportTitle}
               </h2>
             </div>
             <button
               type="button"
               onClick={() => reportDialogRef.current?.close()}
-              aria-label="Close report dialog"
+              aria-label={t.common.close}
             >
               <X className="h-4 w-4 text-[#696969]" />
             </button>
           </div>
           {reportTarget && (
             <p className="text-xs text-[#696969]">
-              Target: <strong className="text-[#1C1C1C]">{reportTarget.label}</strong>
+              {t.restaurant.reportTargetPrefix}{" "}
+              <strong className="text-[#1C1C1C]">{reportTarget.label}</strong>
             </p>
           )}
 
           <div>
             <label htmlFor="report-reason" className="block text-xs font-semibold">
-              Reason
+              {t.restaurant.reportReason}
             </label>
             <select
               id="report-reason"
-              value={reportReason}
-              onChange={(e) => setReportReason(e.target.value)}
+              value={reportReasonIdx}
+              onChange={(e) => setReportReasonIdx(Number(e.target.value))}
               className="mt-1 min-h-11 w-full rounded-lg border border-[#E8E8E8] bg-white px-3 text-sm"
             >
-              <option value="Inaccurate information">Inaccurate information</option>
-              <option value="Spam or promotional content">Spam or promotional content</option>
-              <option value="Inappropriate photo or language">
-                Inappropriate photo or language
-              </option>
-              <option value="Duplicate listing">Duplicate listing</option>
-              <option value="Closed permanently">Closed permanently</option>
+              {t.restaurant.reportReasons.map((reason, idx) => (
+                <option key={idx} value={idx}>
+                  {reason}
+                </option>
+              ))}
             </select>
           </div>
 
           <div>
             <label htmlFor="report-details" className="block text-xs font-semibold">
-              Additional Context
+              {t.restaurant.reportDetails}
             </label>
             <textarea
               id="report-details"
               rows={3}
               value={reportDetails}
               onChange={(e) => setReportDetails(e.target.value)}
-              placeholder="Explain what should be reviewed..."
+              placeholder={t.restaurant.reportDetailsPlaceholder}
               className="mt-1 w-full rounded-lg border border-[#E8E8E8] p-3 text-sm"
             />
           </div>
@@ -2294,14 +2325,14 @@ export function RestaurantDetailClient({
               onClick={() => reportDialogRef.current?.close()}
               className="min-h-10 rounded-lg border border-[#E8E8E8] px-4 text-sm font-medium"
             >
-              Cancel
+              {t.common.cancel}
             </button>
             <button
               type="submit"
               disabled={reportBusy}
               className="min-h-10 rounded-lg bg-[#E23744] px-4 text-sm font-semibold text-white hover:bg-[#C91D2B] disabled:opacity-60"
             >
-              {reportBusy ? "Submitting..." : "Submit Report"}
+              {reportBusy ? t.common.submitting : t.restaurant.reportSubmit}
             </button>
           </div>
         </form>
@@ -2312,7 +2343,8 @@ export function RestaurantDetailClient({
         open={Boolean(confirmState)}
         title={confirmState?.title || ""}
         description={confirmState?.description || ""}
-        confirmLabel="Delete"
+        confirmLabel={t.common.delete}
+        cancelLabel={t.common.cancel}
         destructive
         busy={confirmBusy}
         onConfirm={async () => {

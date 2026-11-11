@@ -10,9 +10,16 @@ import {
   type ReactNode,
 } from "react";
 import { usePathname, useRouter } from "next/navigation";
+import { MotionConfig } from "framer-motion";
 import { UnframerProvider } from "unframer";
 import { CheckCircle2, AlertCircle, Info, X } from "lucide-react";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+import {
+  detectInitialLocale,
+  LOCALE_STORAGE_KEY,
+  type Locale,
+} from "@/lib/i18n/detect";
+import { translations, type CraverDictionary } from "@/lib/i18n/dictionary";
 import type { NotificationItem, Profile } from "@/types/database";
 
 type ToastKind = "success" | "error" | "info";
@@ -25,6 +32,9 @@ interface ToastEntry {
 
 interface CraverContextValue {
   configured: boolean;
+  locale: Locale;
+  setLocale: (locale: Locale) => void;
+  t: CraverDictionary;
   user: { id: string; email: string | null } | null;
   profile: Profile | null;
   selectedArea: string;
@@ -61,6 +71,7 @@ export function CraverProviders({
   const router = useRouter();
   const pathname = usePathname();
 
+  const [locale, setLocaleState] = useState<Locale>("en");
   const [user, setUser] = useState(initialUser);
   const [profile, setProfile] = useState(initialProfile);
   const [favoriteIds, setFavoriteIds] = useState<string[]>(initialFavoriteIds);
@@ -76,14 +87,42 @@ export function CraverProviders({
     setNotifications(initialNotifications);
   }, [initialUser, initialProfile, initialFavoriteIds, initialNotifications]);
 
+  // Resolve initial language on client mount:
+  // Manual saved preference wins; otherwise detect browser language once without overwriting localStorage.
   useEffect(() => {
+    let savedLocale: string | null = null;
     try {
-      const saved = window.localStorage.getItem("craver:area");
-      if (saved) setSelectedAreaState(saved);
+      savedLocale = window.localStorage.getItem(LOCALE_STORAGE_KEY);
+      const savedArea = window.localStorage.getItem("craver:area");
+      if (savedArea) setSelectedAreaState(savedArea);
+    } catch {
+      // ignore storage errors
+    }
+
+    const browserLangs =
+      navigator.languages && navigator.languages.length > 0
+        ? navigator.languages
+        : navigator.language
+          ? [navigator.language]
+          : [];
+    const resolved = detectInitialLocale(savedLocale, browserLangs);
+    setLocaleState(resolved);
+    document.documentElement.lang = resolved;
+  }, []);
+
+  const setLocale = useCallback((next: Locale) => {
+    setLocaleState(next);
+    if (typeof document !== "undefined") {
+      document.documentElement.lang = next;
+    }
+    try {
+      window.localStorage.setItem(LOCALE_STORAGE_KEY, next);
     } catch {
       // ignore storage errors
     }
   }, []);
+
+  const t = useMemo(() => translations[locale], [locale]);
 
   const setSelectedArea = useCallback((area: string) => {
     setSelectedAreaState(area);
@@ -155,15 +194,12 @@ export function CraverProviders({
   const toggleFavorite = useCallback(
     async (restaurantId: string): Promise<boolean> => {
       if (!initialConfigured) {
-        showToast(
-          "Configure Supabase credentials in .env.local to save favorites.",
-          "info"
-        );
+        showToast(t.common.toasts.configureFav, "info");
         return false;
       }
 
       if (!user) {
-        showToast("Sign in to save favorite restaurants.", "info");
+        showToast(t.common.toasts.signInFav, "info");
         router.push(`/auth/login?next=${encodeURIComponent(pathname || "/")}`);
         return false;
       }
@@ -189,7 +225,7 @@ export function CraverProviders({
           showToast(error.message, "error");
           return false;
         }
-        showToast("Removed from saved restaurants.", "info");
+        showToast(t.common.toasts.removedFav, "info");
         return false;
       } else {
         const { error } = await supabase
@@ -200,11 +236,11 @@ export function CraverProviders({
           showToast(error.message, "error");
           return false;
         }
-        showToast("Saved to your favorite places.", "success");
+        showToast(t.common.toasts.addedFav, "success");
         return true;
       }
     },
-    [favoriteIds, initialConfigured, pathname, router, showToast, user]
+    [favoriteIds, initialConfigured, pathname, router, showToast, t, user]
   );
 
   const markNotificationRead = useCallback(
@@ -242,6 +278,9 @@ export function CraverProviders({
   const value = useMemo<CraverContextValue>(
     () => ({
       configured: initialConfigured,
+      locale,
+      setLocale,
+      t,
       user,
       profile,
       selectedArea,
@@ -257,6 +296,9 @@ export function CraverProviders({
     }),
     [
       initialConfigured,
+      locale,
+      setLocale,
+      t,
       user,
       profile,
       selectedArea,
@@ -273,46 +315,57 @@ export function CraverProviders({
   );
 
   return (
-    <UnframerProvider navigate={(path: string) => router.push(path)}>
-      <CraverContext.Provider value={value}>
-        {children}
+    <MotionConfig reducedMotion="user">
+      <UnframerProvider navigate={(path: string) => router.push(path)}>
+        <CraverContext.Provider value={value}>
+          {children}
 
-        {/* Accessible toast notifications */}
-        <div
-          aria-live="polite"
-          role="status"
-          className="pointer-events-none fixed bottom-5 right-5 z-50 flex flex-col gap-2.5 max-w-sm w-[calc(100vw-2.5rem)]"
-        >
-          {toasts.map((toast) => (
-            <div
-              key={toast.id}
-              className="pointer-events-auto flex items-start gap-3 rounded-xl border border-[#E8E8E8] bg-white px-4 py-3 shadow-lg"
-            >
-              {toast.kind === "success" ? (
-                <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-[#1F7A4C]" aria-hidden="true" />
-              ) : toast.kind === "error" ? (
-                <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-[#C91D2B]" aria-hidden="true" />
-              ) : (
-                <Info className="mt-0.5 h-5 w-5 shrink-0 text-[#E23744]" aria-hidden="true" />
-              )}
-              <p className="flex-1 text-sm font-medium text-[#1C1C1C]">
-                {toast.message}
-              </p>
-              <button
-                type="button"
-                onClick={() =>
-                  setToasts((prev) => prev.filter((item) => item.id !== toast.id))
-                }
-                aria-label="Dismiss notification"
-                className="rounded p-0.5 text-[#696969] hover:bg-[#FAFAFA] hover:text-[#1C1C1C]"
+          {/* Accessible toast notifications */}
+          <div
+            aria-live="polite"
+            role="status"
+            className="pointer-events-none fixed bottom-5 right-5 z-50 flex w-[calc(100vw-2.5rem)] max-w-sm flex-col gap-2.5"
+          >
+            {toasts.map((toast) => (
+              <div
+                key={toast.id}
+                className="pointer-events-auto flex items-start gap-3 rounded-xl border border-[#EEEEEE] bg-white px-4 py-3 shadow-lg"
               >
-                <X className="h-4 w-4" aria-hidden="true" />
-              </button>
-            </div>
-          ))}
-        </div>
-      </CraverContext.Provider>
-    </UnframerProvider>
+                {toast.kind === "success" ? (
+                  <CheckCircle2
+                    className="mt-0.5 h-5 w-5 shrink-0 text-[#5B7553]"
+                    aria-hidden="true"
+                  />
+                ) : toast.kind === "error" ? (
+                  <AlertCircle
+                    className="mt-0.5 h-5 w-5 shrink-0 text-[#C91D2B]"
+                    aria-hidden="true"
+                  />
+                ) : (
+                  <Info
+                    className="mt-0.5 h-5 w-5 shrink-0 text-[#E23744]"
+                    aria-hidden="true"
+                  />
+                )}
+                <p className="flex-1 text-sm font-medium text-[#1C1C1C]">
+                  {toast.message}
+                </p>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setToasts((prev) => prev.filter((item) => item.id !== toast.id))
+                  }
+                  aria-label={t.common.dismissNotification}
+                  className="rounded p-0.5 text-[#696969] hover:bg-[#FAFAFA] hover:text-[#1C1C1C]"
+                >
+                  <X className="h-4 w-4" aria-hidden="true" />
+                </button>
+              </div>
+            ))}
+          </div>
+        </CraverContext.Provider>
+      </UnframerProvider>
+    </MotionConfig>
   );
 }
 
@@ -323,4 +376,3 @@ export function useCraver() {
   }
   return ctx;
 }
-

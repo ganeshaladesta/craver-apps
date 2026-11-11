@@ -14,6 +14,8 @@ const jiti = createJiti(import.meta.url, {
 const schemas = await jiti.import(path.join(rootDir, "src/lib/validation/schemas.ts"));
 const utils = await jiti.import(path.join(rootDir, "src/lib/utils.ts"));
 const supaConfig = await jiti.import(path.join(rootDir, "src/lib/supabase/config.ts"));
+const i18nDetect = await jiti.import(path.join(rootDir, "src/lib/i18n/detect.ts"));
+const i18nDict = await jiti.import(path.join(rootDir, "src/lib/i18n/dictionary.ts"));
 
 test("Validation schemas accept valid CRAVER restaurant, menu, review, and profile payloads", () => {
   const restaurantRes = schemas.restaurantSchema.safeParse({
@@ -100,6 +102,7 @@ test("Utility formatters and CRAVER taxonomy match specification", () => {
     "Italian",
     "Coffee & Tea",
     "Dessert",
+    "Street Food",
     "Fast Food",
   ]);
   assert.deepEqual(utils.MENU_CATEGORY_PRESETS, [
@@ -258,7 +261,7 @@ test("SiteHeader patches Framer MotionMinimalNavs text nodes safely without brea
   );
 
   assert.ok(
-    headerSrc.includes("createTreeWalker(anchor, NodeFilter.SHOW_TEXT)"),
+    headerSrc.includes("createTreeWalker(rootEl, NodeFilter.SHOW_TEXT)"),
     "SiteHeader must update leaf Text.nodeValue in place instead of replacing <p>/<a> children"
   );
   assert.ok(
@@ -268,5 +271,97 @@ test("SiteHeader patches Framer MotionMinimalNavs text nodes safely without brea
   assert.ok(
     !footerSrc.includes('layer: "back"'),
     "SiteFooter NudgeFooter badges should stay in front of the wordmark so text is not obscured"
+  );
+  assert.ok(
+    !headerSrc.includes("craver-mega-wrap"),
+    "SiteHeader must not render a second inline dark floating navbar pill alongside primary nav"
+  );
+  assert.ok(
+    headerSrc.includes('id="craver-explore-megamenu"') && headerSrc.includes("MorphingMegaMenu"),
+    "SiteHeader must house MorphingMegaMenu inside the single Explore dropdown"
+  );
+});
+
+test("detectInitialLocale honors stored preference first, then browser language, falling back to en", () => {
+  assert.equal(i18nDetect.detectInitialLocale("id", ["en-US"]), "id");
+  assert.equal(i18nDetect.detectInitialLocale("en", ["id-ID"]), "en");
+  assert.equal(i18nDetect.detectInitialLocale(null, ["id-ID", "en-US"]), "id");
+  assert.equal(i18nDetect.detectInitialLocale(null, ["id"]), "id");
+  assert.equal(i18nDetect.detectInitialLocale(undefined, ["en-GB"]), "en");
+  assert.equal(i18nDetect.detectInitialLocale("invalid", ["fr-FR"]), "en");
+  assert.equal(i18nDetect.detectInitialLocale(null, []), "en");
+});
+
+test("Bilingual dictionaries maintain strict recursive key and array parity between en and id", () => {
+  function assertShapeMatch(enVal, idVal, keyPath) {
+    assert.equal(typeof idVal, typeof enVal, `Type mismatch at ${keyPath}`);
+    if (Array.isArray(enVal)) {
+      assert.ok(Array.isArray(idVal), `Expected array at ${keyPath}`);
+      assert.equal(idVal.length, enVal.length, `Array length mismatch at ${keyPath}`);
+      for (let i = 0; i < enVal.length; i += 1) {
+        assertShapeMatch(enVal[i], idVal[i], `${keyPath}[${i}]`);
+      }
+      return;
+    }
+    if (enVal && typeof enVal === "object") {
+      const enKeys = Object.keys(enVal).sort();
+      const idKeys = Object.keys(idVal).sort();
+      assert.deepEqual(idKeys, enKeys, `Object key mismatch at ${keyPath}`);
+      for (const k of enKeys) {
+        assertShapeMatch(enVal[k], idVal[k], `${keyPath}.${k}`);
+      }
+      return;
+    }
+    if (typeof enVal === "string") {
+      assert.ok(idVal.trim().length > 0, `Empty string at id.${keyPath}`);
+    }
+  }
+
+  assertShapeMatch(i18nDict.translations.en, i18nDict.translations.id, "root");
+  assert.deepEqual(
+    Object.keys(i18nDict.CATEGORY_LABELS.en).sort(),
+    Object.keys(i18nDict.CATEGORY_LABELS.id).sort(),
+    "CATEGORY_LABELS keys must match across en and id"
+  );
+});
+
+test("CRAVER 2.0 integrates BrandMarkRights, Programs, single footer landmark, and SignInCard2", () => {
+  const framerImports = fs.readFileSync(
+    path.join(rootDir, "src/components/framer/FramerImports.tsx"),
+    "utf8"
+  );
+  const footerSrc = fs.readFileSync(
+    path.join(rootDir, "src/components/layout/SiteFooter.tsx"),
+    "utf8"
+  );
+  const authFormSrc = fs.readFileSync(
+    path.join(rootDir, "src/components/auth/AuthForm.tsx"),
+    "utf8"
+  );
+  const signInCardSrc = fs.readFileSync(
+    path.join(rootDir, "src/components/auth/SignInCard2.tsx"),
+    "utf8"
+  );
+
+  assert.ok(
+    framerImports.includes("https://framer.com/m/BrandMarkRights-MDV1mM.js@V8hRWAFGaoA4xF6VucdB"),
+    "Missing BrandMarkRights Framer import"
+  );
+  assert.ok(
+    framerImports.includes("https://framer.com/m/Programs-fpaSe9.js@XeUSDe9VIrW0d2C0bOjk"),
+    "Missing Programs Framer import"
+  );
+  const strippedFooter = footerSrc.replace(/\{\/\*[\s\S]*?\*\/\}/g, "");
+  assert.ok(
+    !strippedFooter.includes("<footer"),
+    "SiteFooter must not wrap BrandMarkRights in a nested <footer> landmark"
+  );
+  assert.ok(
+    footerSrc.includes("<BrandMarkRights"),
+    "SiteFooter must mount BrandMarkRights"
+  );
+  assert.ok(
+    authFormSrc.includes("SignInCard2") && signInCardSrc.includes("resetPasswordForEmail"),
+    "Auth flow must integrate SignInCard2 with forgot/reset password support"
   );
 });

@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Inter, Manrope } from "next/font/google";
+import { Fraunces, Inter, Manrope } from "next/font/google";
 import "./globals.css";
 import { CraverProviders } from "@/components/providers/CraverProviders";
 import { SiteHeader } from "@/components/layout/SiteHeader";
@@ -19,10 +19,17 @@ const manrope = Manrope({
   display: "swap",
 });
 
+const fraunces = Fraunces({
+  subsets: ["latin"],
+  variable: "--font-serif",
+  style: ["normal", "italic"],
+  display: "swap",
+});
+
 export const metadata: Metadata = {
-  title: "CRAVER — Discover Places. Find Your Craving.",
+  title: "CRAVER — Good Food. Great Places. Your Kind of Craving.",
   description:
-    "Explore extraordinary restaurants across Jakarta, browse complete digital food menus, view real food photography, and share the dining places you love.",
+    "Discover extraordinary restaurants across Jakarta, explore complete digital food menus, view real dish photography, and share the places worth talking about.",
 };
 
 export default async function RootLayout({
@@ -33,8 +40,11 @@ export default async function RootLayout({
   const session = await getSessionContext();
 
   return (
-    <html lang="en" className={`${inter.variable} ${manrope.variable}`}>
-      <body className="flex min-h-screen flex-col bg-white text-[#1C1C1C] antialiased">
+    <html
+      lang="en"
+      className={`${inter.variable} ${manrope.variable} ${fraunces.variable}`}
+    >
+      <body className="flex min-h-screen flex-col bg-[#FAFAFA] text-[#1C1C1C] antialiased">
         <CraverProviders
           initialConfigured={session.configured}
           initialUser={session.user}
@@ -44,7 +54,9 @@ export default async function RootLayout({
         >
           <SetupBanner configured={session.configured} />
           <SiteHeader />
-          <main className="flex-1">{children}</main>
+          <main id="main-content" className="flex-1">
+            {children}
+          </main>
           <SiteFooter />
         </CraverProviders>
       </body>

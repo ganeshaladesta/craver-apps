@@ -40,11 +40,14 @@ export function slugify(value: string): string {
     .replace(/^-|-$/g, "");
 }
 
-export function formatDate(dateStr: string | null | undefined): string {
+export function formatDate(
+  dateStr: string | null | undefined,
+  locale: "id" | "en" = "en"
+): string {
   if (!dateStr) return "";
   const parsed = new Date(dateStr);
   if (Number.isNaN(parsed.getTime())) return "";
-  return new Intl.DateTimeFormat("en-US", {
+  return new Intl.DateTimeFormat(locale === "id" ? "id-ID" : "en-US", {
     month: "short",
     day: "numeric",
     year: "numeric",
@@ -74,6 +77,7 @@ export const CUISINE_CATEGORIES = [
   "Italian",
   "Coffee & Tea",
   "Dessert",
+  "Street Food",
   "Fast Food",
 ] as const;
 
