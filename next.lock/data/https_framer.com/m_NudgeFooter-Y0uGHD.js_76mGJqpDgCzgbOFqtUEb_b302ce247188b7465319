@@ -1,0 +1,8 @@
+/*
+ * NudgeFooter
+ *
+ * Learn More: https://www.framer.com/asset-urls
+ */
+
+export * from "https://framerusercontent.com/modules/3SgdaM7alCJ8wPA9H3BK/76mGJqpDgCzgbOFqtUEb/NudgeFooter.js"
+export { default } from "https://framerusercontent.com/modules/3SgdaM7alCJ8wPA9H3BK/76mGJqpDgCzgbOFqtUEb/NudgeFooter.js"

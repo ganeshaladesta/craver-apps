@@ -1,0 +1,8 @@
+/*
+ * Slot_Text_with_3D
+ *
+ * Learn More: https://www.framer.com/asset-urls
+ */
+
+export * from "https://framerusercontent.com/modules/R0exc11qDhteBSgX0yd9/hd1LcXRGqQlE3ymfziEq/Slot_Text_with_3D.js"
+export { default } from "https://framerusercontent.com/modules/R0exc11qDhteBSgX0yd9/hd1LcXRGqQlE3ymfziEq/Slot_Text_with_3D.js"

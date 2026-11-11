@@ -1,0 +1,8 @@
+/*
+ * Motion Minimal Navs
+ *
+ * Learn More: https://www.framer.com/asset-urls
+ */
+
+export * from "https://framerusercontent.com/modules/XnYmjybQDgwQoLHZeZpZ/uK2yqMCOJeH6mshsdPfx/E5HHCt_cw.js"
+export { default } from "https://framerusercontent.com/modules/XnYmjybQDgwQoLHZeZpZ/uK2yqMCOJeH6mshsdPfx/E5HHCt_cw.js"

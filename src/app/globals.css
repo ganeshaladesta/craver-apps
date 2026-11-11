@@ -1,0 +1,272 @@
+@import "tailwindcss";
+
+:root {
+  --craver-red: #E23744;
+  --craver-red-deep: #C91D2B;
+  --craver-red-light: #FFF0F1;
+  --craver-white: #FFFFFF;
+  --craver-text: #1C1C1C;
+  --craver-text-secondary: #696969;
+  --craver-border: #E8E8E8;
+  --craver-bg-soft: #FAFAFA;
+  --accent: #E23744;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background-color: var(--craver-white);
+  color: var(--craver-text);
+  font-family: var(--font-inter), system-ui, -apple-system, sans-serif;
+}
+
+h1, h2, h3, h4, .font-display {
+  font-family: var(--font-manrope), var(--font-inter), system-ui, sans-serif;
+}
+
+/* Accessible focus outlines across controls */
+:focus-visible {
+  outline: 3px solid var(--craver-red);
+  outline-offset: 2px;
+}
+
+/* Form validation & responsive typography */
+input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="range"]),
+select,
+textarea {
+  font: inherit;
+  font-size: max(1rem, 1em);
+}
+
+input:user-invalid,
+select:user-invalid,
+textarea:user-invalid {
+  border-color: var(--craver-red-deep);
+}
+
+.visually-hidden {
+  position: absolute;
+  clip-path: inset(50%);
+  overflow: hidden;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  border: 0;
+  white-space: nowrap;
+}
+
+/* Native modal dialog scroll containment (both mandatory rules) */
+dialog:modal {
+  overscroll-behavior: contain;
+  margin: auto;
+  border: 1px solid var(--craver-border);
+  border-radius: 16px;
+  background: var(--craver-white);
+  color: var(--craver-text);
+  padding: 0;
+  max-inline-size: min(92dvw, 540px);
+  max-block-size: min(88dvh, 720px);
+  box-shadow: 0 24px 64px -16px rgba(28, 28, 28, 0.28);
+}
+
+dialog:modal[data-size="wide"] {
+  max-inline-size: min(94dvw, 900px);
+  max-block-size: min(92dvh, 840px);
+}
+
+dialog::backdrop {
+  overflow: hidden;
+  overscroll-behavior: contain;
+  background: rgba(28, 28, 28, 0.52);
+  backdrop-filter: blur(4px);
+}
+
+/* Accessible Tabs styling tied to aria-selected */
+.craver-tablist {
+  display: flex;
+  overflow-x: auto;
+  scrollbar-width: none;
+  scroll-snap-type: inline proximity;
+  border-block-end: 1px solid var(--craver-border);
+  gap: 0.25rem;
+}
+
+.craver-tablist::-webkit-scrollbar {
+  display: none;
+}
+
+[role="tab"] {
+  position: relative;
+  flex: none;
+  scroll-snap-align: start;
+  padding: 0.875rem 1.25rem;
+  font-weight: 500;
+  color: var(--craver-text-secondary);
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  transition: color 0.18s ease;
+}
+
+[role="tab"]:hover {
+  color: var(--craver-text);
+}
+
+[role="tab"][aria-selected="true"] {
+  color: var(--craver-red);
+}
+
+[role="tab"][aria-selected="true"]::after {
+  content: "";
+  position: absolute;
+  inset: auto 0 0;
+  border-block-end: 3px solid var(--craver-red);
+}
+
+/* Primary Nav current page indicator (color + underline, WCAG 1.4.1) */
+.craver-nav-link {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  padding-block: 0.5rem;
+  padding-inline: 0.25rem;
+  color: var(--craver-text);
+  font-weight: 500;
+  transition: color 0.15s ease;
+}
+
+.craver-nav-link:hover {
+  color: var(--craver-red);
+}
+
+.craver-nav-link[aria-current="page"] {
+  color: var(--craver-red);
+  font-weight: 600;
+}
+
+.craver-nav-link[aria-current="page"]::after {
+  content: "";
+  position: absolute;
+  inset-inline: 0;
+  inset-block-end: -2px;
+  border-block-end: 2.5px solid var(--craver-red);
+}
+
+/* Responsive Admin Data Tables */
+.table-wrapper {
+  overflow: auto;
+  max-inline-size: 100%;
+  max-block-size: min(560px, 72dvh);
+  container-type: inline-size;
+  border: 1px solid var(--craver-border);
+  border-radius: 12px;
+  background: var(--craver-white);
+}
+
+.craver-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  text-align: left;
+  font-size: 0.875rem;
+}
+
+.craver-table thead {
+  position: sticky;
+  inset-block-start: 0;
+  z-index: 2;
+  background: var(--craver-bg-soft);
+}
+
+.craver-table thead th {
+  padding: 0.75rem 1rem;
+  font-weight: 600;
+  color: var(--craver-text-secondary);
+  border-block-end: 1px solid var(--craver-border);
+  white-space: nowrap;
+}
+
+.craver-table tbody th {
+  position: sticky;
+  inset-inline-start: 0;
+  z-index: 1;
+  background: var(--craver-white);
+  padding: 0.875rem 1rem;
+  font-weight: 600;
+  color: var(--craver-text);
+  border-block-end: 1px solid var(--craver-border);
+}
+
+.craver-table tbody td {
+  padding: 0.875rem 1rem;
+  border-block-end: 1px solid var(--craver-border);
+  vertical-align: middle;
+}
+
+@container (width < 600px) {
+  .craver-table,
+  .craver-table thead,
+  .craver-table tbody,
+  .craver-table tr,
+  .craver-table th,
+  .craver-table td {
+    display: block;
+  }
+
+  .craver-table thead {
+    display: none;
+  }
+
+  .craver-table tr {
+    margin-block-end: 1rem;
+    border: 1px solid var(--craver-border);
+    border-radius: 10px;
+    overflow: hidden;
+    background: var(--craver-white);
+  }
+
+  .craver-table tbody th {
+    position: sticky;
+    inset-block-start: 0;
+    z-index: 2;
+    background: var(--craver-bg-soft);
+  }
+
+  .craver-table td::before {
+    content: attr(data-label) ": ";
+    font-weight: 600;
+    color: var(--craver-text-secondary);
+    display: inline-block;
+    margin-inline-end: 0.375rem;
+  }
+}
+
+/* Harmonize Framer Motion Minimal Navs accents with CRAVER branding */
+.craver-framer-minimal-wrap .framer-j96fU .framer-1flustv-container a,
+.craver-framer-minimal-wrap .framer-j96fU .framer-1kf0zaz-container a,
+.craver-framer-minimal-wrap .framer-j96fU .framer-sf4o54-container a,
+.craver-framer-minimal-wrap .framer-j96fU .framer-1th44rx-container a {
+  border-radius: 8px;
+}
+
+.craver-framer-minimal-wrap a[data-craver-active="true"] p {
+  color: #E23744 !important;
+  font-weight: 600 !important;
+}
+
+.craver-mega-wrap .framer-nnFU8 {
+  z-index: 50;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    scroll-behavior: auto !important;
+  }
+}

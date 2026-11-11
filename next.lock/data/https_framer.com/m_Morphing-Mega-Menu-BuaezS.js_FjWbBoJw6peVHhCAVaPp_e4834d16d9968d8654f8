@@ -1,0 +1,8 @@
+/*
+ * Morphing Mega Menu
+ *
+ * Learn More: https://www.framer.com/asset-urls
+ */
+
+export * from "https://framerusercontent.com/modules/1Wr05TUtasKm77YbPk0f/FjWbBoJw6peVHhCAVaPp/a_JwWKP99.js"
+export { default } from "https://framerusercontent.com/modules/1Wr05TUtasKm77YbPk0f/FjWbBoJw6peVHhCAVaPp/a_JwWKP99.js"
