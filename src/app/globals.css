@@ -249,6 +249,15 @@ dialog::backdrop {
 }
 
 /* Harmonize Framer Motion Minimal Navs accents with CRAVER branding */
+.craver-framer-minimal-wrap
+  .framer-j96fU.framer-1a06n1x:not(.framer-v-7bqof3):not(.framer-v-zzne2w) {
+  width: 190px;
+}
+
+.craver-framer-minimal-wrap .framer-7gq5bm:empty {
+  display: none;
+}
+
 .craver-framer-minimal-wrap .framer-j96fU .framer-1flustv-container a,
 .craver-framer-minimal-wrap .framer-j96fU .framer-1kf0zaz-container a,
 .craver-framer-minimal-wrap .framer-j96fU .framer-sf4o54-container a,
@@ -256,13 +265,18 @@ dialog::backdrop {
   border-radius: 8px;
 }
 
-.craver-framer-minimal-wrap a[data-craver-active="true"] p {
+.craver-framer-minimal-wrap a[data-craver-active="true"] {
   color: #E23744 !important;
+  --framer-text-color: #E23744 !important;
   font-weight: 600 !important;
 }
 
 .craver-mega-wrap .framer-nnFU8 {
   z-index: 50;
+}
+
+.craver-mega-wrap .framer-nnFU8 .framer-1y8j13e {
+  background: linear-gradient(180deg, rgba(28, 28, 30, 0.96) 0%, rgba(16, 16, 18, 0.98) 100%) !important;
 }
 
 @media (prefers-reduced-motion: reduce) {

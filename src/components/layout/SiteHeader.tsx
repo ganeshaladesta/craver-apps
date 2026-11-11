@@ -56,6 +56,18 @@ export function SiteHeader() {
 
   const isActivePath = (href: string) => isPathMatch(pathname, href);
 
+  const closeMinimalNavIfOpen = () => {
+    const host = minimalNavHostRef.current;
+    if (!host) return;
+    const isOpen = Boolean(host.querySelector('[data-framer-name="Toggle Label Close"]'));
+    const toggle = host.querySelector('[data-framer-name="Menu Toggle"]') as HTMLElement | null;
+    if (isOpen && toggle) {
+      toggle.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true, isPrimary: true }));
+      toggle.dispatchEvent(new PointerEvent("pointerup", { bubbles: true, isPrimary: true }));
+      toggle.click();
+    }
+  };
+
   // Close popovers on outside click or route transition
   useEffect(() => {
     setAreaOpen(false);
@@ -70,12 +82,16 @@ export function SiteHeader() {
         setNotifOpen(false);
         setProfileOpen(false);
       }
+      if (!minimalNavHostRef.current?.contains(e.target as Node)) {
+        closeMinimalNavIfOpen();
+      }
     };
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
         setAreaOpen(false);
         setNotifOpen(false);
         setProfileOpen(false);
+        closeMinimalNavIfOpen();
       }
     };
     document.addEventListener("mousedown", onPointerDown);
@@ -100,25 +116,47 @@ export function SiteHeader() {
       { container: "Legal Link 2", label: "Terms of Service", href: "/terms" },
     ];
 
+    const patchAnchorText = (anchor: HTMLAnchorElement, label: string) => {
+      // Mutate only the existing leaf Text node inside <a> so React/Framer keeps its <p><a> child intact
+      const walker = document.createTreeWalker(anchor, NodeFilter.SHOW_TEXT);
+      const firstText = walker.nextNode();
+      if (firstText) {
+        if (firstText.nodeValue !== label) {
+          firstText.nodeValue = label;
+        }
+        let extra = walker.nextNode();
+        while (extra) {
+          if (extra.nodeValue !== "") extra.nodeValue = "";
+          extra = walker.nextNode();
+        }
+      }
+    };
+
     const patchDom = () => {
       for (const item of menuMap) {
         const container = host.querySelector(`[data-framer-name="${item.container}"]`);
         if (!container) continue;
-        const anchor = container.querySelector("a");
-        if (anchor) {
+        const anchors = container.querySelectorAll("a");
+        const activeStr = isPathMatch(pathname, item.href) ? "true" : "false";
+        anchors.forEach((anchor) => {
           if (anchor.getAttribute("href") !== item.href) {
             anchor.setAttribute("href", item.href);
           }
-          anchor.removeAttribute("target");
-          const active = isPathMatch(pathname, item.href);
-          anchor.setAttribute("data-craver-active", active ? "true" : "false");
-          if (active) anchor.setAttribute("aria-current", "page");
-          else anchor.removeAttribute("aria-current");
-        }
-        const labelP = container.querySelector("p");
-        if (labelP && labelP.textContent !== item.label) {
-          labelP.textContent = item.label;
-        }
+          if (anchor.hasAttribute("target")) {
+            anchor.removeAttribute("target");
+          }
+          if (anchor.getAttribute("data-craver-active") !== activeStr) {
+            anchor.setAttribute("data-craver-active", activeStr);
+          }
+          if (activeStr === "true") {
+            if (anchor.getAttribute("aria-current") !== "page") {
+              anchor.setAttribute("aria-current", "page");
+            }
+          } else if (anchor.hasAttribute("aria-current")) {
+            anchor.removeAttribute("aria-current");
+          }
+          patchAnchorText(anchor, item.label);
+        });
       }
 
       const socialAnchors = host.querySelectorAll(
@@ -133,9 +171,15 @@ export function SiteHeader() {
       socialAnchors.forEach((a, idx) => {
         const target = socialRoutes[idx];
         if (!target) return;
-        a.setAttribute("href", target.href);
-        a.setAttribute("aria-label", target.label);
-        a.removeAttribute("target");
+        if (a.getAttribute("href") !== target.href) {
+          a.setAttribute("href", target.href);
+        }
+        if (a.getAttribute("aria-label") !== target.label) {
+          a.setAttribute("aria-label", target.label);
+        }
+        if (a.hasAttribute("target")) {
+          a.removeAttribute("target");
+        }
       });
     };
 
@@ -146,6 +190,7 @@ export function SiteHeader() {
   }, [pathname]);
 
   const handleMinimalNavClickCapture = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
     const target = e.target as HTMLElement | null;
     const anchor = target?.closest("a");
     if (!anchor) return;
@@ -154,13 +199,20 @@ export function SiteHeader() {
       e.preventDefault();
       e.stopPropagation();
       router.push(href);
-      const toggle = minimalNavHostRef.current?.querySelector(
-        '[data-framer-name="Menu Toggle"]'
-      ) as HTMLElement | null;
-      const isOpen = Boolean(
-        minimalNavHostRef.current?.querySelector('[data-framer-name="Toggle Label Close"]')
-      );
-      if (isOpen && toggle) toggle.click();
+      closeMinimalNavIfOpen();
+    }
+  };
+
+  const handleMegaMenuClickCapture = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
+    const target = e.target as HTMLElement | null;
+    const anchor = target?.closest("a");
+    if (!anchor) return;
+    const href = anchor.getAttribute("href");
+    if (href && href.startsWith("/")) {
+      e.preventDefault();
+      e.stopPropagation();
+      router.push(href);
     }
   };
 
@@ -185,9 +237,9 @@ export function SiteHeader() {
       ref={headerRef}
       className="sticky top-0 z-40 border-b border-[#E8E8E8] bg-white/95 backdrop-blur-md"
     >
-      <div className="mx-auto flex h-[74px] max-w-7xl items-center justify-between gap-3 px-4 sm:px-6 lg:px-8">
+      <div className="mx-auto flex h-[74px] max-w-7xl items-center justify-between gap-2 sm:gap-3 px-3 sm:px-6 2xl:px-8">
         {/* Left: Logo + Jakarta Area Selector */}
-        <div className="flex items-center gap-3 sm:gap-4 min-w-0">
+        <div className="flex items-center gap-2 sm:gap-2.5 shrink-0">
           <CraverLogo />
 
           <div className="relative hidden sm:block">
@@ -201,10 +253,10 @@ export function SiteHeader() {
               aria-expanded={areaOpen}
               aria-haspopup="listbox"
               aria-label="Select Jakarta area"
-              className="inline-flex min-h-10 items-center gap-1.5 rounded-full border border-[#E8E8E8] bg-[#FAFAFA] px-3 py-1.5 text-sm font-medium text-[#1C1C1C] transition hover:border-[#E23744]/40 hover:bg-white"
+              className="inline-flex min-h-10 items-center gap-1.5 rounded-full border border-[#E8E8E8] bg-[#FAFAFA] px-2.5 py-1.5 text-sm font-medium text-[#1C1C1C] transition hover:border-[#E23744]/40 hover:bg-white"
             >
               <MapPin className="h-4 w-4 shrink-0 text-[#E23744]" aria-hidden="true" />
-              <span className="max-w-[120px] truncate">{selectedArea}</span>
+              <span className="max-w-[92px] 2xl:max-w-[110px] truncate">{selectedArea}</span>
               <ChevronDown
                 className={cn(
                   "h-3.5 w-3.5 text-[#696969] transition-transform",
@@ -261,8 +313,8 @@ export function SiteHeader() {
         </div>
 
         {/* Center-Desktop: Primary Nav + Expanded Framer MorphingMegaMenu */}
-        <nav aria-label="Primary" className="hidden lg:flex items-center gap-6">
-          <ul className="flex items-center gap-5">
+        <nav aria-label="Primary" className="hidden lg:flex items-center gap-3 2xl:gap-5">
+          <ul className="flex items-center gap-3 xl:gap-3.5 2xl:gap-5">
             {PRIMARY_LINKS.map((link) => {
               const active = isActivePath(link.href);
               return (
@@ -279,13 +331,16 @@ export function SiteHeader() {
             })}
           </ul>
 
-          {/* Framer Morphing Mega Menu integrated cleanly for expanded Jakarta discovery */}
-          <div className="craver-mega-wrap hidden lg:flex items-center origin-center lg:scale-[0.86] xl:scale-100">
+          {/* Framer Morphing Mega Menu integrated cleanly at xl (1280px+) where horizontal space allows 1:1 display */}
+          <div
+            onClickCapture={handleMegaMenuClickCapture}
+            className="craver-mega-wrap hidden xl:flex items-center"
+          >
             <MorphingMegaMenu
               projectsLabel="Cuisines"
-              studioLabel="Districts"
+              studioLabel="Areas"
               journalLabel="Cravings"
-              contactLabel="Add Place"
+              contactLabel="Submit"
               contactLink="/contribute"
               project1Title="Indonesian"
               project1Text="Archipelago hearth & heritage classics"
@@ -335,7 +390,7 @@ export function SiteHeader() {
         </nav>
 
         {/* Right: Notifications, Account Profile, and Mobile Framer MotionMinimalNavs */}
-        <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+        <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
           {/* Notification Bell */}
           <div className="relative">
             <button
@@ -347,7 +402,7 @@ export function SiteHeader() {
                 setAreaOpen(false);
                 setProfileOpen(false);
               }}
-              className="relative inline-flex h-10 w-10 items-center justify-center rounded-full border border-[#E8E8E8] bg-white text-[#1C1C1C] transition hover:border-[#E23744]/40 hover:text-[#E23744]"
+              className="relative inline-flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-full border border-[#E8E8E8] bg-white text-[#1C1C1C] transition hover:border-[#E23744]/40 hover:text-[#E23744]"
             >
               <Bell className="h-[18px] w-[18px]" aria-hidden="true" />
               {unreadCount > 0 && (
@@ -514,29 +569,30 @@ export function SiteHeader() {
                 )}
               </>
             ) : (
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5 sm:gap-2">
                 <Link
                   href="/auth/login"
-                  className="hidden sm:inline-flex min-h-10 items-center rounded-lg px-3 text-sm font-semibold text-[#1C1C1C] transition hover:text-[#E23744]"
+                  className="hidden sm:inline-flex min-h-10 items-center whitespace-nowrap rounded-lg px-2 text-sm font-semibold text-[#1C1C1C] transition hover:text-[#E23744]"
                 >
                   Log in
                 </Link>
                 <Link
                   href="/auth/signup"
-                  className="inline-flex min-h-10 items-center rounded-full bg-[#E23744] px-4 text-sm font-semibold text-white transition hover:bg-[#C91D2B]"
+                  className="inline-flex h-9 sm:h-10 items-center whitespace-nowrap rounded-full bg-[#E23744] px-3 sm:px-3.5 2xl:px-4 text-xs sm:text-sm font-semibold text-white transition hover:bg-[#C91D2B]"
                 >
-                  Join CRAVER
+                  <span className="sm:hidden">Join</span>
+                  <span className="hidden sm:inline">Join CRAVER</span>
                 </Link>
               </div>
             )}
           </div>
 
           {/* Mobile / Tablet Navigation: Framer MotionMinimalNavs (no duplicate hamburger menu) */}
-          <div className="relative h-14 w-[142px] sm:w-[216px] lg:hidden">
+          <div className="relative h-[44px] w-[124px] sm:h-[53px] sm:w-[148px] shrink-0 lg:hidden">
             <div
               ref={minimalNavHostRef}
               onClickCapture={handleMinimalNavClickCapture}
-              className="craver-framer-minimal-wrap absolute right-0 top-0.5 z-50 origin-top-right scale-[0.58] sm:scale-[0.82]"
+              className="craver-framer-minimal-wrap absolute right-0 top-0 z-50 origin-top-right scale-[0.65] sm:scale-[0.78]"
             >
               <MotionMinimalNavs showClock={false} />
             </div>

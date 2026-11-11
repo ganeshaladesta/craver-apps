@@ -13,13 +13,17 @@ export function CraverLogo({
   linked = true,
 }: CraverLogoProps) {
   const iconDims =
-    size === "sm" ? "h-7 w-7" : size === "lg" ? "h-10 w-10" : "h-8 w-8";
+    size === "sm"
+      ? "h-7 w-7"
+      : size === "lg"
+        ? "h-10 w-10"
+        : "h-7 w-7 sm:h-8 sm:w-8";
   const textSize =
     size === "sm"
       ? "text-lg tracking-[-0.03em]"
       : size === "lg"
         ? "text-2xl tracking-[-0.04em]"
-        : "text-xl tracking-[-0.035em]";
+        : "text-lg sm:text-xl tracking-[-0.035em]";
 
   const content = (
     <span className={cn("inline-flex items-center gap-2 select-none", className)}>

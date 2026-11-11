@@ -246,3 +246,27 @@ test("Multi-FK PostgREST profile embeds qualify explicit foreign key constraints
     }
   }
 });
+
+test("SiteHeader patches Framer MotionMinimalNavs text nodes safely without breaking React DOM children", () => {
+  const headerSrc = fs.readFileSync(
+    path.join(rootDir, "src/components/layout/SiteHeader.tsx"),
+    "utf8"
+  );
+  const footerSrc = fs.readFileSync(
+    path.join(rootDir, "src/components/layout/SiteFooter.tsx"),
+    "utf8"
+  );
+
+  assert.ok(
+    headerSrc.includes("createTreeWalker(anchor, NodeFilter.SHOW_TEXT)"),
+    "SiteHeader must update leaf Text.nodeValue in place instead of replacing <p>/<a> children"
+  );
+  assert.ok(
+    !headerSrc.includes(".textContent ="),
+    "SiteHeader must never assign .textContent directly on Framer RichText nodes (causes removeChild crash)"
+  );
+  assert.ok(
+    !footerSrc.includes('layer: "back"'),
+    "SiteFooter NudgeFooter badges should stay in front of the wordmark so text is not obscured"
+  );
+});
