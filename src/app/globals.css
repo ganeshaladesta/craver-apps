@@ -308,8 +308,102 @@ dialog::backdrop {
   }
 }
 
-/* Harmonize Framer MotionMinimalNavs for CRAVER mobile/tablet drawer (light & crimson, never a black pill) */
-.craver-framer-minimal-wrap .framer-j96fU.framer-1a06n1x {
+/* Bilingual Switcher (ID | EN) — pure horizontal translation, vertically locked */
+.craver-lang-switcher {
+  --craver-lang-pad: 2px;
+  position: relative;
+  display: inline-grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: center;
+  height: 28px;
+  padding: var(--craver-lang-pad);
+  border-radius: 9999px;
+  border-width: 1px;
+  border-style: solid;
+  overflow: hidden;
+  isolation: isolate;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.025em;
+  line-height: 1;
+}
+
+.craver-lang-indicator {
+  position: absolute;
+  inset-block: var(--craver-lang-pad);
+  inset-inline-start: var(--craver-lang-pad);
+  width: calc(50% - var(--craver-lang-pad));
+  border-radius: 9999px;
+  z-index: 0;
+  pointer-events: none;
+  will-change: transform;
+}
+
+.craver-lang-indicator[data-locale="id"] {
+  transform: translate3d(0, 0, 0);
+}
+
+.craver-lang-indicator[data-locale="en"] {
+  transform: translate3d(100%, 0, 0);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .craver-lang-indicator {
+    transition: transform 220ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+}
+
+.craver-lang-option {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  min-width: 24px;
+  padding-inline: 5px;
+  border-radius: 9999px;
+  cursor: pointer;
+  user-select: none;
+  transition: color 0.15s ease;
+}
+
+@media (min-width: 375px) {
+  .craver-lang-switcher {
+    --craver-lang-pad: 3px;
+    height: 32px;
+    font-size: 11px;
+  }
+
+  .craver-lang-option {
+    min-width: 28px;
+    padding-inline: 7px;
+  }
+}
+
+@media (min-width: 640px) {
+  .craver-lang-switcher {
+    height: 36px;
+  }
+
+  .craver-lang-option {
+    min-width: 34px;
+    padding-inline: 9px;
+  }
+}
+
+/* Harmonize Framer MotionMinimalNavs into ONE unified CRAVER mobile/tablet drawer */
+.craver-mobile-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  background-color: rgba(28, 28, 28, 0.36);
+  overflow: hidden;
+  overscroll-behavior: contain;
+  touch-action: none;
+}
+
+.craver-framer-minimal-wrap:not(.craver-drawer-open) .framer-j96fU.framer-1a06n1x {
   background: transparent !important;
   padding: 0 !important;
   border-radius: 0 !important;
@@ -318,14 +412,11 @@ dialog::backdrop {
   align-items: flex-end !important;
 }
 
-.craver-framer-minimal-wrap
-  .framer-j96fU.framer-1a06n1x.framer-v-7bqof3,
-.craver-framer-minimal-wrap
-  .framer-j96fU.framer-1a06n1x.framer-v-zzne2w {
-  width: min(340px, calc(100vw - 20px)) !important;
+.craver-framer-minimal-wrap:not(.craver-drawer-open) .framer-tuvs6k {
+  display: none !important;
 }
 
-.craver-framer-minimal-wrap .framer-j96fU .framer-sg97ep {
+.craver-framer-minimal-wrap:not(.craver-drawer-open) .framer-j96fU .framer-sg97ep {
   background: #ffffff !important;
   border: 1px solid #eeeeee !important;
   border-radius: 9999px !important;
@@ -337,44 +428,49 @@ dialog::backdrop {
 }
 
 @media (max-width: 374px) {
-  .craver-framer-minimal-wrap .framer-j96fU .framer-sg97ep {
+  .craver-framer-minimal-wrap:not(.craver-drawer-open) .framer-j96fU .framer-sg97ep {
     height: 28px !important;
     padding: 0 7px !important;
   }
 
-  .craver-framer-minimal-wrap .framer-j96fU .framer-1axf4t2 {
+  .craver-framer-minimal-wrap:not(.craver-drawer-open) .framer-j96fU .framer-1axf4t2 {
     height: 26px !important;
     gap: 4px !important;
   }
 
-  .craver-framer-minimal-wrap .framer-j96fU .framer-12i9dws {
+  .craver-framer-minimal-wrap:not(.craver-drawer-open) .framer-j96fU .framer-12i9dws {
     width: 15px !important;
     height: 15px !important;
   }
 
-  .craver-framer-minimal-wrap .framer-j96fU .framer-1gtz5t3 {
+  .craver-framer-minimal-wrap:not(.craver-drawer-open) .framer-j96fU .framer-1gtz5t3 {
     width: 13px !important;
     top: 4px !important;
   }
 
-  .craver-framer-minimal-wrap .framer-j96fU .framer-lw91bj {
+  .craver-framer-minimal-wrap:not(.craver-drawer-open) .framer-j96fU .framer-lw91bj {
     width: 13px !important;
     top: 9px !important;
   }
 
-  .craver-framer-minimal-wrap .framer-j96fU .framer-1j679kk p,
-  .craver-framer-minimal-wrap .framer-j96fU .framer-1btzoe2 p {
+  .craver-framer-minimal-wrap:not(.craver-drawer-open) .framer-j96fU .framer-1j679kk p {
     font-size: 11.5px !important;
   }
 }
 
-.craver-header-hero .craver-framer-minimal-wrap .framer-j96fU .framer-sg97ep {
+.craver-header-hero .craver-framer-minimal-wrap:not(.craver-drawer-open) .framer-j96fU .framer-sg97ep {
   background: rgba(255, 255, 255, 0.16) !important;
   border-color: rgba(255, 255, 255, 0.28) !important;
 }
 
-.craver-framer-minimal-wrap .framer-j96fU .framer-sg97ep:hover {
+.craver-framer-minimal-wrap:not(.craver-drawer-open) .framer-j96fU .framer-sg97ep:hover {
   border-color: rgba(226, 55, 68, 0.5) !important;
+}
+
+.craver-framer-minimal-wrap:not(.craver-drawer-open) .framer-j96fU .framer-1axf4t2:focus-visible {
+  outline: 2px solid #e23744 !important;
+  outline-offset: 2px !important;
+  border-radius: 9999px !important;
 }
 
 .craver-framer-minimal-wrap .framer-j96fU .framer-1axf4t2 {
@@ -387,9 +483,18 @@ dialog::backdrop {
   background-color: #1c1c1c !important;
 }
 
-.craver-header-hero .craver-framer-minimal-wrap .framer-j96fU .framer-1gtz5t3,
-.craver-header-hero .craver-framer-minimal-wrap .framer-j96fU .framer-lw91bj {
+.craver-header-hero .craver-framer-minimal-wrap:not(.craver-drawer-open) .framer-j96fU .framer-1gtz5t3,
+.craver-header-hero .craver-framer-minimal-wrap:not(.craver-drawer-open) .framer-j96fU .framer-lw91bj {
   background-color: #ffffff !important;
+}
+
+.craver-framer-minimal-wrap .framer-j96fU .framer-1j679kk,
+.craver-framer-minimal-wrap .framer-j96fU .framer-1j679kk *,
+.craver-framer-minimal-wrap .framer-j96fU .framer-1btzoe2,
+.craver-framer-minimal-wrap .framer-j96fU .framer-1btzoe2 * {
+  opacity: 1 !important;
+  visibility: visible !important;
+  filter: none !important;
 }
 
 .craver-framer-minimal-wrap .framer-j96fU .framer-1j679kk p {
@@ -400,24 +505,10 @@ dialog::backdrop {
   font-weight: 600 !important;
 }
 
-.craver-header-hero .craver-framer-minimal-wrap .framer-j96fU .framer-1j679kk p {
+.craver-header-hero .craver-framer-minimal-wrap:not(.craver-drawer-open) .framer-j96fU .framer-1j679kk p {
   color: #ffffff !important;
   --framer-text-color: #ffffff !important;
   --extracted-r6o4lv: #ffffff !important;
-}
-
-.craver-framer-minimal-wrap .framer-j96fU .framer-1btzoe2 p {
-  color: #e23744 !important;
-  --framer-text-color: #e23744 !important;
-  --extracted-r6o4lv: #e23744 !important;
-  font-size: 13px !important;
-  font-weight: 600 !important;
-}
-
-.craver-header-hero .craver-framer-minimal-wrap .framer-j96fU .framer-1btzoe2 p {
-  color: #ffb800 !important;
-  --framer-text-color: #ffb800 !important;
-  --extracted-r6o4lv: #ffb800 !important;
 }
 
 .craver-framer-minimal-wrap .framer-j96fU .framer-1yg06vj,
@@ -425,24 +516,172 @@ dialog::backdrop {
   display: none !important;
 }
 
-.craver-framer-minimal-wrap
-  .framer-j96fU.framer-v-7bqof3
-  .framer-tuvs6k,
-.craver-framer-minimal-wrap
-  .framer-j96fU.framer-v-zzne2w
-  .framer-tuvs6k {
-  margin-top: 12px !important;
+/* Unified open drawer container: one white card, one border, one shadow, one vertical scroller */
+.craver-framer-minimal-wrap.craver-drawer-open {
+  position: fixed !important;
+  top: max(var(--craver-drawer-top, 12px), env(safe-area-inset-top, 0px)) !important;
+  right: max(10px, env(safe-area-inset-right, 0px)) !important;
+  bottom: auto !important;
+  left: auto !important;
+  z-index: 20 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: stretch !important;
+  width: min(
+    360px,
+    calc(100dvw - 20px - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px))
+  ) !important;
+  max-height: calc(
+    100dvh - max(var(--craver-drawer-top, 12px), env(safe-area-inset-top, 0px)) -
+      max(12px, env(safe-area-inset-bottom, 0px))
+  ) !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
   background: #ffffff !important;
   border: 1px solid #eeeeee !important;
-  border-bottom: 0 !important;
-  border-radius: 16px 16px 0 0 !important;
-  box-shadow: 0 12px 32px -12px rgba(28, 28, 28, 0.16) !important;
-  clip-path: inset(-40px -40px 0px -40px) !important;
+  border-radius: 16px !important;
+  box-shadow: 0 18px 44px -12px rgba(28, 28, 28, 0.22) !important;
+  color: #1c1c1c !important;
 }
 
-.craver-framer-minimal-wrap .framer-j96fU .framer-13u3res {
-  padding: 16px 16px 12px 16px !important;
-  gap: 12px !important;
+/* Strip inner Framer panels of duplicate chrome so all 7 sections live cleanly in one container */
+.craver-framer-minimal-wrap.craver-drawer-open .framer-j96fU.framer-1a06n1x,
+.craver-framer-minimal-wrap.craver-drawer-open .framer-j96fU.framer-1a06n1x.framer-v-7bqof3,
+.craver-framer-minimal-wrap.craver-drawer-open .framer-j96fU.framer-1a06n1x.framer-v-zzne2w {
+  position: static !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  background: transparent !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  overflow: visible !important;
+  transform: none !important;
+  will-change: auto !important;
+  align-items: stretch !important;
+}
+
+.craver-framer-minimal-wrap.craver-drawer-open .framer-j96fU .framer-sg97ep {
+  position: sticky !important;
+  top: 0 !important;
+  z-index: 5 !important;
+  width: 100% !important;
+  min-height: 56px !important;
+  height: auto !important;
+  margin: 0 !important;
+  padding: 6px 16px !important;
+  background: #ffffff !important;
+  border: 0 !important;
+  border-bottom: 1px solid #eeeeee !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  justify-content: flex-end !important;
+}
+
+.craver-framer-minimal-wrap.craver-drawer-open .framer-j96fU .framer-1axf4t2 {
+  min-height: 44px !important;
+  height: 44px !important;
+  padding: 0 12px !important;
+  gap: 8px !important;
+  border-radius: 9999px !important;
+  background: transparent !important;
+  color: #e23744 !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.craver-framer-minimal-wrap.craver-drawer-open .framer-j96fU .framer-1axf4t2:hover {
+  background-color: #fff0f1 !important;
+  color: #c91d2b !important;
+}
+
+.craver-framer-minimal-wrap.craver-drawer-open .framer-j96fU .framer-1axf4t2:focus-visible {
+  outline: 2px solid #e23744 !important;
+  outline-offset: 2px !important;
+  background-color: #fff0f1 !important;
+  color: #c91d2b !important;
+}
+
+.craver-framer-minimal-wrap.craver-drawer-open .framer-j96fU .framer-1axf4t2:active {
+  background-color: #ffe4e6 !important;
+  color: #c91d2b !important;
+}
+
+.craver-framer-minimal-wrap.craver-drawer-open .framer-j96fU .framer-1gtz5t3,
+.craver-framer-minimal-wrap.craver-drawer-open .framer-j96fU .framer-lw91bj {
+  background-color: #e23744 !important;
+  width: 16px !important;
+  top: 9px !important;
+}
+
+.craver-framer-minimal-wrap.craver-drawer-open .framer-j96fU .framer-1axf4t2:is(:hover, :focus-visible, :active) .framer-1gtz5t3,
+.craver-framer-minimal-wrap.craver-drawer-open .framer-j96fU .framer-1axf4t2:is(:hover, :focus-visible, :active) .framer-lw91bj {
+  background-color: #c91d2b !important;
+}
+
+.craver-framer-minimal-wrap.craver-drawer-open .framer-j96fU .framer-1btzoe2 p {
+  color: #e23744 !important;
+  --framer-text-color: #e23744 !important;
+  --extracted-r6o4lv: #e23744 !important;
+  font-size: 13px !important;
+  font-weight: 700 !important;
+}
+
+.craver-framer-minimal-wrap.craver-drawer-open .framer-j96fU .framer-1axf4t2:is(:hover, :focus-visible, :active) .framer-1btzoe2 p {
+  color: #c91d2b !important;
+  --framer-text-color: #c91d2b !important;
+  --extracted-r6o4lv: #c91d2b !important;
+}
+
+.craver-framer-minimal-wrap.craver-drawer-open .framer-j96fU .framer-tuvs6k {
+  margin: 0 !important;
+  width: 100% !important;
+  height: auto !important;
+  background: transparent !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  clip-path: none !important;
+  overflow: visible !important;
+  display: flex !important;
+}
+
+/* Consistent 20px horizontal padding across all sections inside drawer */
+.craver-framer-minimal-wrap.craver-drawer-open .framer-j96fU .framer-13u3res {
+  width: 100% !important;
+  padding: 16px 20px 0 20px !important;
+  gap: 0 !important;
+}
+
+.craver-framer-minimal-wrap.craver-drawer-open .framer-j96fU .framer-ecutph {
+  padding: 0 0 14px 0 !important;
+  gap: 2px !important;
+}
+
+.craver-framer-minimal-wrap.craver-drawer-open .framer-j96fU .framer-1uew55z {
+  width: 100% !important;
+  height: 1px !important;
+  background-color: #eeeeee !important;
+  margin: 0 !important;
+}
+
+.craver-framer-minimal-wrap.craver-drawer-open .framer-j96fU .framer-a30ce1 {
+  width: 100% !important;
+  padding: 14px 0 !important;
+  gap: 2px !important;
+  border-bottom: 1px solid #eeeeee !important;
+}
+
+.craver-framer-minimal-wrap.craver-drawer-open .framer-j96fU .framer-1knz9kk {
+  width: 100% !important;
+  padding: 14px 0 !important;
+  gap: 10px !important;
+  border-bottom: 1px solid #eeeeee !important;
 }
 
 .craver-framer-minimal-wrap .framer-j96fU .framer-d2sobk p,
@@ -452,47 +691,454 @@ dialog::backdrop {
   --framer-text-color: #696969 !important;
   --extracted-r6o4lv: #696969 !important;
   font-size: 11px !important;
-  font-weight: 600 !important;
+  font-weight: 700 !important;
   letter-spacing: 0.06em !important;
   text-transform: uppercase !important;
+  opacity: 1 !important;
+  visibility: visible !important;
 }
 
-.craver-framer-minimal-wrap .framer-j96fU .framer-1uew55z {
-  background-color: #eeeeee !important;
+/* Eliminate Framer dual-copy hover marquee clipping so text never disappears or clips on hover */
+.craver-framer-minimal-wrap .framer-NzKpS.framer-1xm5ris,
+.craver-framer-minimal-wrap .framer-ou6Fb.framer-12k7wth {
+  width: 100% !important;
+  padding: 0 !important;
+  height: auto !important;
+}
+
+.craver-framer-minimal-wrap .framer-NzKpS .framer-18gr0as,
+.craver-framer-minimal-wrap .framer-ou6Fb .framer-130ifkq {
+  width: 100% !important;
+  height: auto !important;
+  min-height: 0 !important;
+  overflow: visible !important;
+  justify-content: flex-start !important;
+  align-items: stretch !important;
+  gap: 0 !important;
+}
+
+.craver-framer-minimal-wrap .framer-NzKpS .framer-f7dyew,
+.craver-framer-minimal-wrap .framer-ou6Fb .framer-125hhr0,
+.craver-framer-minimal-wrap .framer-RXNcB .framer-1yp8h6s {
+  display: none !important;
+}
+
+.craver-framer-minimal-wrap .framer-NzKpS .framer-jpkf6d,
+.craver-framer-minimal-wrap .framer-ou6Fb .framer-17iu6y3 {
+  width: 100% !important;
+  height: auto !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+}
+
+.craver-framer-minimal-wrap .framer-NzKpS .framer-jpkf6d p,
+.craver-framer-minimal-wrap .framer-ou6Fb .framer-17iu6y3 p {
+  color: #1c1c1c !important;
+  --framer-text-color: #1c1c1c !important;
+  --extracted-r6o4lv: #1c1c1c !important;
+  opacity: 1 !important;
+  visibility: visible !important;
 }
 
 .craver-framer-minimal-wrap .framer-NzKpS .framer-jpkf6d a,
-.craver-framer-minimal-wrap .framer-NzKpS .framer-f7dyew a {
+.craver-framer-minimal-wrap .framer-NzKpS .framer-jpkf6d a:link,
+.craver-framer-minimal-wrap .framer-NzKpS .framer-jpkf6d a:visited,
+.craver-framer-minimal-wrap .framer-ou6Fb .framer-17iu6y3 a,
+.craver-framer-minimal-wrap .framer-ou6Fb .framer-17iu6y3 a:link,
+.craver-framer-minimal-wrap .framer-ou6Fb .framer-17iu6y3 a:visited {
+  display: flex !important;
+  align-items: center !important;
+  width: 100% !important;
+  min-height: 44px !important;
+  padding: 10px 12px !important;
+  margin-inline: 0 !important;
+  border-radius: 10px !important;
+  background-color: transparent !important;
   color: #1c1c1c !important;
   --framer-text-color: #1c1c1c !important;
+  --extracted-r6o4lv: #1c1c1c !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+  text-decoration: none !important;
+  line-height: 1.35 !important;
+  transition: background-color 0.15s ease, color 0.15s ease !important;
+}
+
+.craver-framer-minimal-wrap .framer-NzKpS .framer-jpkf6d a {
   font-size: 16px !important;
+  font-weight: 500 !important;
 }
 
-.craver-framer-minimal-wrap .framer-NzKpS:hover .framer-f7dyew a {
-  color: #e23744 !important;
-  --framer-text-color: #e23744 !important;
-}
-
-.craver-framer-minimal-wrap .framer-j96fU .framer-1flustv-container a,
-.craver-framer-minimal-wrap .framer-j96fU .framer-1kf0zaz-container a,
-.craver-framer-minimal-wrap .framer-j96fU .framer-sf4o54-container a,
-.craver-framer-minimal-wrap .framer-j96fU .framer-1th44rx-container a {
-  border-radius: 8px;
+.craver-framer-minimal-wrap .framer-ou6Fb .framer-17iu6y3 a {
+  font-size: 14px !important;
+  font-weight: 500 !important;
 }
 
 .craver-framer-minimal-wrap .framer-NzKpS .framer-jpkf6d a[data-craver-active="true"],
-.craver-framer-minimal-wrap .framer-NzKpS .framer-f7dyew a[data-craver-active="true"],
-.craver-framer-minimal-wrap .framer-NzKpS a[data-craver-active="true"],
-.craver-framer-minimal-wrap .framer-NzKpS a[data-craver-active="true"] p {
+.craver-framer-minimal-wrap .framer-NzKpS .framer-jpkf6d a[aria-current="page"],
+.craver-framer-minimal-wrap .framer-ou6Fb .framer-17iu6y3 a[data-craver-active="true"],
+.craver-framer-minimal-wrap .framer-ou6Fb .framer-17iu6y3 a[aria-current="page"] {
+  background-color: #fff0f1 !important;
   color: #e23744 !important;
   --framer-text-color: #e23744 !important;
   --extracted-r6o4lv: #e23744 !important;
   font-weight: 600 !important;
+  opacity: 1 !important;
+  visibility: visible !important;
 }
 
-.craver-mobile-drawer-footer {
-  box-shadow: 0 14px 32px -12px rgba(28, 28, 28, 0.16);
-  clip-path: inset(0px -40px -40px -40px);
+.craver-framer-minimal-wrap .framer-NzKpS .framer-jpkf6d a[data-craver-active="true"] p,
+.craver-framer-minimal-wrap .framer-NzKpS .framer-jpkf6d a[aria-current="page"] p,
+.craver-framer-minimal-wrap .framer-ou6Fb .framer-17iu6y3 a[data-craver-active="true"] p,
+.craver-framer-minimal-wrap .framer-ou6Fb .framer-17iu6y3 a[aria-current="page"] p {
+  background-color: transparent !important;
+  color: #e23744 !important;
+  --framer-text-color: #e23744 !important;
+  --extracted-r6o4lv: #e23744 !important;
+  font-weight: 600 !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+}
+
+.craver-framer-minimal-wrap .framer-NzKpS:hover .framer-jpkf6d a,
+.craver-framer-minimal-wrap .framer-NzKpS .framer-jpkf6d a:hover,
+.craver-framer-minimal-wrap .framer-ou6Fb:hover .framer-17iu6y3 a,
+.craver-framer-minimal-wrap .framer-ou6Fb .framer-17iu6y3 a:hover {
+  background-color: #fff0f1 !important;
+  color: #e23744 !important;
+  --framer-text-color: #e23744 !important;
+  --extracted-r6o4lv: #e23744 !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+}
+
+.craver-framer-minimal-wrap .framer-NzKpS:hover .framer-jpkf6d p,
+.craver-framer-minimal-wrap .framer-NzKpS .framer-jpkf6d a:hover p,
+.craver-framer-minimal-wrap .framer-ou6Fb:hover .framer-17iu6y3 p,
+.craver-framer-minimal-wrap .framer-ou6Fb .framer-17iu6y3 a:hover p {
+  background-color: transparent !important;
+  color: #e23744 !important;
+  --framer-text-color: #e23744 !important;
+  --extracted-r6o4lv: #e23744 !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+}
+
+.craver-framer-minimal-wrap .framer-NzKpS .framer-jpkf6d a:focus-visible,
+.craver-framer-minimal-wrap .framer-ou6Fb .framer-17iu6y3 a:focus-visible {
+  background-color: #fff0f1 !important;
+  color: #e23744 !important;
+  --framer-text-color: #e23744 !important;
+  --extracted-r6o4lv: #e23744 !important;
+  outline: 2px solid #e23744 !important;
+  outline-offset: 2px !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+}
+
+.craver-framer-minimal-wrap .framer-NzKpS .framer-jpkf6d a:focus-visible p,
+.craver-framer-minimal-wrap .framer-ou6Fb .framer-17iu6y3 a:focus-visible p {
+  background-color: transparent !important;
+  color: #e23744 !important;
+  --framer-text-color: #e23744 !important;
+  --extracted-r6o4lv: #e23744 !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+}
+
+.craver-framer-minimal-wrap .framer-NzKpS .framer-jpkf6d a:active,
+.craver-framer-minimal-wrap .framer-ou6Fb .framer-17iu6y3 a:active {
+  background-color: #ffe4e6 !important;
+  color: #c91d2b !important;
+  --framer-text-color: #c91d2b !important;
+  --extracted-r6o4lv: #c91d2b !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+}
+
+.craver-framer-minimal-wrap .framer-NzKpS .framer-jpkf6d a:active p,
+.craver-framer-minimal-wrap .framer-ou6Fb .framer-17iu6y3 a:active p {
+  background-color: transparent !important;
+  color: #c91d2b !important;
+  --framer-text-color: #c91d2b !important;
+  --extracted-r6o4lv: #c91d2b !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+}
+
+/* Social media 44x44 targets with legible icon hover/focus/active states */
+.craver-framer-minimal-wrap.craver-drawer-open .framer-j96fU .framer-pwugvi {
+  gap: 10px !important;
+  flex-wrap: wrap !important;
+}
+
+.craver-framer-minimal-wrap .framer-RXNcB .framer-1q4i2tn {
+  width: 20px !important;
+  height: 20px !important;
+  overflow: visible !important;
+  justify-content: center !important;
+  align-items: center !important;
+}
+
+.craver-framer-minimal-wrap .framer-RXNcB .framer-ivdol3 {
+  width: 18px !important;
+  height: 18px !important;
+  --21h8s6: #1c1c1c !important;
+}
+
+.craver-framer-minimal-wrap .framer-RXNcB.framer-1m1ai0b,
+.craver-framer-minimal-wrap .framer-RXNcB.framer-1m1ai0b:visited {
+  width: 44px !important;
+  height: 44px !important;
+  min-width: 44px !important;
+  min-height: 44px !important;
+  padding: 0 !important;
+  border-radius: 9999px !important;
+  border: 1px solid #eeeeee !important;
+  background-color: #fafafa !important;
+  color: #1c1c1c !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease !important;
+}
+
+.craver-framer-minimal-wrap .framer-RXNcB.framer-1m1ai0b:hover,
+.craver-framer-minimal-wrap .framer-RXNcB.framer-1m1ai0b:focus-visible {
+  background-color: #fff0f1 !important;
+  border-color: rgba(226, 55, 68, 0.4) !important;
+  color: #e23744 !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+}
+
+.craver-framer-minimal-wrap .framer-RXNcB.framer-1m1ai0b:hover .framer-ivdol3,
+.craver-framer-minimal-wrap .framer-RXNcB.framer-1m1ai0b:focus-visible .framer-ivdol3 {
+  --21h8s6: #e23744 !important;
+}
+
+.craver-framer-minimal-wrap .framer-RXNcB.framer-1m1ai0b:focus-visible {
+  outline: 2px solid #e23744 !important;
+  outline-offset: 2px !important;
+}
+
+.craver-framer-minimal-wrap .framer-RXNcB.framer-1m1ai0b:active {
+  background-color: #ffe4e6 !important;
+  color: #c91d2b !important;
+}
+
+.craver-framer-minimal-wrap .framer-RXNcB.framer-1m1ai0b:active .framer-ivdol3 {
+  --21h8s6: #c91d2b !important;
+}
+
+/* Integrated drawer extension sections (4. Neighborhoods, 5. Explore Categories, 6. Filters, 7. Submit CTA) */
+.craver-mobile-drawer-extra {
+  width: 100%;
+  background: transparent;
+  padding: 0 20px calc(20px + env(safe-area-inset-bottom, 0px)) 20px;
+  color: #1c1c1c;
+}
+
+.craver-drawer-section {
+  padding-block: 14px;
+}
+
+.craver-drawer-section + .craver-drawer-section {
+  border-top: 1px solid #eeeeee;
+}
+
+.craver-drawer-section:last-child {
+  padding-bottom: 0;
+}
+
+.craver-drawer-heading {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 10px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #696969;
+  opacity: 1;
+  visibility: visible;
+}
+
+.craver-drawer-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 8px 14px;
+  border-radius: 9999px;
+  border: 1px solid #eeeeee;
+  background-color: #fafafa;
+  color: #1c1c1c;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.25;
+  cursor: pointer;
+  opacity: 1;
+  visibility: visible;
+  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.craver-drawer-chip:hover {
+  border-color: rgba(226, 55, 68, 0.45);
+  background-color: #fff0f1;
+  color: #e23744;
+  opacity: 1;
+}
+
+.craver-drawer-chip:focus-visible {
+  color: #e23744;
+  background-color: #fff0f1;
+  outline: 2px solid #e23744;
+  outline-offset: 2px;
+  opacity: 1;
+}
+
+.craver-drawer-chip:active {
+  background-color: #ffe4e6;
+  color: #c91d2b;
+  opacity: 1;
+}
+
+.craver-drawer-chip[aria-pressed="true"] {
+  border-color: #e23744;
+  background-color: #fff0f1;
+  color: #e23744;
+  font-weight: 600;
+}
+
+.craver-drawer-tab {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 8px 12px;
+  border-radius: 9999px;
+  border: 1px solid transparent;
+  background-color: #fafafa;
+  color: #1c1c1c;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.25;
+  cursor: pointer;
+  opacity: 1;
+  visibility: visible;
+  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.craver-drawer-tab:hover {
+  background-color: #fff0f1;
+  border-color: rgba(226, 55, 68, 0.35);
+  color: #e23744;
+  opacity: 1;
+}
+
+.craver-drawer-tab:focus-visible {
+  color: #e23744;
+  background-color: #fff0f1;
+  outline: 2px solid #e23744;
+  outline-offset: 2px;
+  opacity: 1;
+}
+
+.craver-drawer-tab:active {
+  background-color: #ffe4e6;
+  color: #c91d2b;
+  opacity: 1;
+}
+
+.craver-drawer-tab[aria-pressed="true"] {
+  border-color: rgba(226, 55, 68, 0.3);
+  background-color: #fff0f1;
+  color: #e23744;
+  font-weight: 600;
+}
+
+.craver-drawer-filter-link,
+.craver-drawer-filter-link:link,
+.craver-drawer-filter-link:visited {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  min-height: 44px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid #eeeeee;
+  background-color: #fafafa;
+  color: #1c1c1c;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.3;
+  text-decoration: none;
+  opacity: 1;
+  visibility: visible;
+  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.craver-drawer-filter-link:hover {
+  border-color: rgba(226, 55, 68, 0.45);
+  background-color: #fff0f1;
+  color: #e23744;
+  opacity: 1;
+}
+
+.craver-drawer-filter-link:focus-visible {
+  color: #e23744;
+  background-color: #fff0f1;
+  outline: 2px solid #e23744;
+  outline-offset: 2px;
+  opacity: 1;
+}
+
+.craver-drawer-filter-link:active {
+  background-color: #ffe4e6;
+  color: #c91d2b;
+  opacity: 1;
+}
+
+.craver-mobile-cta,
+.craver-mobile-cta:link,
+.craver-mobile-cta:visited {
+  display: flex;
+  width: 100%;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border-radius: 9999px;
+  background-color: #e23744;
+  padding: 11px 16px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #ffffff;
+  text-decoration: none;
+  opacity: 1;
+  visibility: visible;
+  transition: background-color 0.15s ease;
+}
+
+.craver-mobile-cta:hover {
+  background-color: #c91d2b;
+  color: #ffffff;
+  opacity: 1;
+}
+
+.craver-mobile-cta:focus-visible {
+  background-color: #c91d2b;
+  color: #ffffff;
+  outline: 2px solid #e23744;
+  outline-offset: 2px;
+  opacity: 1;
+}
+
+.craver-mobile-cta:active {
+  background-color: #b01824;
+  color: #ffffff;
+  opacity: 1;
 }
 
 /* Harmonize Framer MorphingMegaMenu inside CRAVER Explore dropdown */

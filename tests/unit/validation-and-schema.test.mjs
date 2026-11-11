@@ -365,3 +365,41 @@ test("CRAVER 2.0 integrates BrandMarkRights, Programs, single footer landmark, a
     "Auth flow must integrate SignInCard2 with forgot/reset password support"
   );
 });
+
+test("SiteHeader uses unified mobile drawer container and horizontal-only language indicator", () => {
+  const headerSrc = fs.readFileSync(
+    path.join(rootDir, "src/components/layout/SiteHeader.tsx"),
+    "utf8"
+  );
+  const cssSrc = fs.readFileSync(path.join(rootDir, "src/app/globals.css"), "utf8");
+
+  assert.ok(
+    !headerSrc.includes("craver-lang-slider") && !headerSrc.includes('from "framer-motion"'),
+    "SiteHeader language switcher must use persistent horizontal CSS indicator instead of Framer layoutId"
+  );
+  assert.ok(
+    headerSrc.includes('className="craver-lang-indicator') || headerSrc.includes("craver-lang-indicator"),
+    "SiteHeader must mount persistent .craver-lang-indicator"
+  );
+  assert.ok(
+    headerSrc.includes("data-locale={locale}"),
+    "Language indicator must bind data-locale for pure horizontal transform"
+  );
+  assert.ok(
+    cssSrc.includes('transform: translate3d(100%, 0, 0)') &&
+      cssSrc.includes("craver-drawer-open") &&
+      cssSrc.includes("framer-ou6Fb .framer-17iu6y3 a:hover"),
+    "globals.css must enforce horizontal-only language translation, unified .craver-drawer-open container, and LegalLink/MenuLink hover visibility"
+  );
+
+  const termsPos = headerSrc.indexOf("t.footer.termsOfService");
+  const privacyPos = headerSrc.indexOf("t.footer.privacyPolicy");
+  assert.ok(
+    termsPos !== -1 && privacyPos !== -1 && termsPos < privacyPos,
+    "Mobile drawer LEGAL section must order Terms of Service before Privacy Policy"
+  );
+  assert.ok(
+    headerSrc.includes("craver-mobile-drawer-extra") && headerSrc.includes("t.nav.categoryFilters"),
+    "Unified mobile drawer must include Neighborhoods, Explore Categories, Category Filters, and Submit Restaurant CTA inside the single drawer shell"
+  );
+});

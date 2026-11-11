@@ -1,9 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { motion } from "framer-motion";
 import {
   ArrowRight,
   Bell,
@@ -80,6 +79,7 @@ export function SiteHeader() {
   const [notifOpen, setNotifOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [drawerTopPx, setDrawerTopPx] = useState(12);
   const [mobileExploreTab, setMobileExploreTab] = useState<ExploreTab>("cuisines");
 
   const headerRef = useRef<HTMLElement>(null);
@@ -91,6 +91,7 @@ export function SiteHeader() {
   const notifWrapRef = useRef<HTMLDivElement>(null);
   const profileWrapRef = useRef<HTMLDivElement>(null);
   const minimalNavHostRef = useRef<HTMLDivElement>(null);
+  const closingDrawerLockRef = useRef(false);
 
   const isHomePage = pathname === "/";
   const anyOverlayOpen =
@@ -137,17 +138,31 @@ export function SiteHeader() {
     return megaVariantAlt === 0 ? "Desktop · Journal" : "Tablet · Journal";
   }, [exploreTab, megaVariantAlt]);
 
-  const closeMinimalNavIfOpen = () => {
+  const syncDrawerTop = useCallback(() => {
+    const rect = headerRef.current?.getBoundingClientRect();
+    setDrawerTopPx(rect ? Math.max(8, Math.round(rect.top + 8)) : 12);
+  }, []);
+
+  const closeMinimalNavIfOpen = useCallback((restoreFocus = false) => {
     const host = minimalNavHostRef.current;
-    if (!host) return;
-    const isOpen = Boolean(host.querySelector('[data-framer-name="Toggle Label Close"]'));
+    if (!host || closingDrawerLockRef.current) return;
+    const isOpen = Boolean(
+      host.querySelector('[data-framer-name="Toggle Label Close"]') ||
+        host.querySelector(".framer-v-7bqof3, .framer-v-zzne2w")
+    );
     const toggle = host.querySelector('[data-framer-name="Menu Toggle"]') as HTMLElement | null;
     if (isOpen && toggle) {
+      closingDrawerLockRef.current = true;
       toggle.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true, isPrimary: true }));
       toggle.dispatchEvent(new PointerEvent("pointerup", { bubbles: true, isPrimary: true }));
-      toggle.click();
+      window.setTimeout(() => {
+        closingDrawerLockRef.current = false;
+      }, 160);
+      if (restoreFocus) {
+        requestAnimationFrame(() => toggle.focus());
+      }
     }
-  };
+  }, []);
 
   // Close popovers on route transitions
   useEffect(() => {
@@ -156,7 +171,7 @@ export function SiteHeader() {
     setNotifOpen(false);
     setProfileOpen(false);
     closeMinimalNavIfOpen();
-  }, [pathname]);
+  }, [closeMinimalNavIfOpen, pathname]);
 
   // Outside clicks, outside focus, and Escape key handling
   useEffect(() => {
@@ -188,11 +203,12 @@ export function SiteHeader() {
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
         const wasExploreOpen = exploreOpen;
+        const wasMobileOpen = mobileMenuOpen;
         setAreaOpen(false);
         setExploreOpen(false);
         setNotifOpen(false);
         setProfileOpen(false);
-        closeMinimalNavIfOpen();
+        closeMinimalNavIfOpen(wasMobileOpen);
         if (wasExploreOpen) {
           exploreTriggerRef.current?.focus();
         }
@@ -207,7 +223,63 @@ export function SiteHeader() {
       document.removeEventListener("focusin", onFocusIn);
       document.removeEventListener("keydown", onKeyDown);
     };
-  }, [exploreOpen]);
+  }, [closeMinimalNavIfOpen, exploreOpen, mobileMenuOpen]);
+
+  // Lock background page scroll cleanly while the unified mobile drawer is open (without mutating root overflow)
+  useEffect(() => {
+    if (!mobileMenuOpen) return;
+    syncDrawerTop();
+    window.addEventListener("resize", syncDrawerTop, { passive: true });
+
+    const mainEl = document.getElementById("main-content");
+    const bannerEl = headerRef.current?.previousElementSibling as HTMLElement | null;
+    const footerEl = mainEl?.nextElementSibling as HTMLElement | null;
+    const targets = [bannerEl, mainEl, footerEl].filter(Boolean) as HTMLElement[];
+    const prevInert = targets.map((el) => el.hasAttribute("inert"));
+    targets.forEach((el) => el.setAttribute("inert", ""));
+
+    const preventBackgroundWheel = (e: WheelEvent) => {
+      const host = minimalNavHostRef.current;
+      if (!host) return;
+      const target = e.target as Node | null;
+      if (!target || !host.contains(target)) {
+        e.preventDefault();
+        return;
+      }
+      const maxScroll = host.scrollHeight - host.clientHeight;
+      if (maxScroll <= 1) {
+        e.preventDefault();
+        return;
+      }
+      if (
+        (host.scrollTop <= 0 && e.deltaY < 0) ||
+        (host.scrollTop >= maxScroll - 1 && e.deltaY > 0)
+      ) {
+        e.preventDefault();
+      }
+    };
+
+    const preventBackgroundTouchMove = (e: TouchEvent) => {
+      const host = minimalNavHostRef.current;
+      if (!host) return;
+      const target = e.target as Node | null;
+      if (!target || !host.contains(target) || host.scrollHeight <= host.clientHeight + 1) {
+        e.preventDefault();
+      }
+    };
+
+    window.addEventListener("wheel", preventBackgroundWheel, { passive: false });
+    window.addEventListener("touchmove", preventBackgroundTouchMove, { passive: false });
+
+    return () => {
+      window.removeEventListener("resize", syncDrawerTop);
+      window.removeEventListener("wheel", preventBackgroundWheel);
+      window.removeEventListener("touchmove", preventBackgroundTouchMove);
+      targets.forEach((el, idx) => {
+        if (!prevInert[idx]) el.removeAttribute("inert");
+      });
+    };
+  }, [mobileMenuOpen, syncDrawerTop]);
 
   // Keep MorphingMegaMenu locked on the active Explore panel while dropdown is open
   useEffect(() => {
@@ -233,7 +305,7 @@ export function SiteHeader() {
   }, [exploreOpen]);
 
   // Synchronize Framer MotionMinimalNavs internal MenuLink & LegalLink nodes + open state
-  useEffect(() => {
+  const patchMinimalNavDom = useCallback(() => {
     const host = minimalNavHostRef.current;
     if (!host) return;
 
@@ -242,8 +314,8 @@ export function SiteHeader() {
       { container: "Menu Link 2", label: t.nav.explore, href: "/explore" },
       { container: "Menu Link 3", label: t.nav.collections, href: "/collections" },
       { container: "Menu Link 4", label: t.nav.contribute, href: "/contribute" },
-      { container: "Legal Link 1", label: t.footer.privacyPolicy, href: "/privacy" },
-      { container: "Legal Link 2", label: t.footer.termsOfService, href: "/terms" },
+      { container: "Legal Link 1", label: t.footer.termsOfService, href: "/terms" },
+      { container: "Legal Link 2", label: t.footer.privacyPolicy, href: "/privacy" },
     ];
 
     const patchLeafText = (rootEl: Element, label: string) => {
@@ -261,93 +333,98 @@ export function SiteHeader() {
       }
     };
 
-    const patchDom = () => {
-      const isOpen = Boolean(host.querySelector('[data-framer-name="Toggle Label Close"]'));
-      setMobileMenuOpen(isOpen);
+    const isOpen = Boolean(host.querySelector('[data-framer-name="Toggle Label Close"]'));
+    if (!isOpen) {
+      closingDrawerLockRef.current = false;
+    }
+    setMobileMenuOpen(isOpen);
 
-      for (const item of menuMap) {
-        const container = host.querySelector(`[data-framer-name="${item.container}"]`);
-        if (!container) continue;
-        const anchors = container.querySelectorAll("a");
-        const activeStr = isPathMatch(pathname, item.href) ? "true" : "false";
-        anchors.forEach((anchor) => {
-          if (anchor.getAttribute("href") !== item.href) {
-            anchor.setAttribute("href", item.href);
+    for (const item of menuMap) {
+      const container = host.querySelector(`[data-framer-name="${item.container}"]`);
+      if (!container) continue;
+      const anchors = container.querySelectorAll("a");
+      const activeStr = isPathMatch(pathname, item.href) ? "true" : "false";
+      anchors.forEach((anchor) => {
+        if (anchor.getAttribute("href") !== item.href) {
+          anchor.setAttribute("href", item.href);
+        }
+        if (anchor.hasAttribute("target")) {
+          anchor.removeAttribute("target");
+        }
+        if (anchor.getAttribute("data-craver-active") !== activeStr) {
+          anchor.setAttribute("data-craver-active", activeStr);
+        }
+        if (activeStr === "true") {
+          if (anchor.getAttribute("aria-current") !== "page") {
+            anchor.setAttribute("aria-current", "page");
           }
-          if (anchor.hasAttribute("target")) {
-            anchor.removeAttribute("target");
-          }
-          if (anchor.getAttribute("data-craver-active") !== activeStr) {
-            anchor.setAttribute("data-craver-active", activeStr);
-          }
-          if (activeStr === "true") {
-            if (anchor.getAttribute("aria-current") !== "page") {
-              anchor.setAttribute("aria-current", "page");
-            }
-          } else if (anchor.hasAttribute("aria-current")) {
-            anchor.removeAttribute("aria-current");
-          }
-          patchLeafText(anchor, item.label);
-        });
-      }
-
-      const closeLabelEl = host.querySelector('[data-framer-name="Toggle Label Close"]');
-      if (closeLabelEl) {
-        patchLeafText(closeLabelEl, locale === "id" ? "Tutup" : "Close");
-      }
-
-      const menuToggleEl = host.querySelector(
-        '[data-framer-name="Menu Toggle"]'
-      ) as HTMLElement | null;
-      if (menuToggleEl) {
-        if (menuToggleEl.getAttribute("role") !== "button") {
-          menuToggleEl.setAttribute("role", "button");
+        } else if (anchor.hasAttribute("aria-current")) {
+          anchor.removeAttribute("aria-current");
         }
-        if (menuToggleEl.getAttribute("tabindex") !== "0") {
-          menuToggleEl.setAttribute("tabindex", "0");
-        }
-        const expandedStr = isOpen ? "true" : "false";
-        if (menuToggleEl.getAttribute("aria-expanded") !== expandedStr) {
-          menuToggleEl.setAttribute("aria-expanded", expandedStr);
-        }
-        const toggleLabel = isOpen
-          ? locale === "id"
-            ? "Tutup menu navigasi"
-            : "Close navigation menu"
-          : locale === "id"
-            ? "Buka menu navigasi"
-            : "Open navigation menu";
-        if (menuToggleEl.getAttribute("aria-label") !== toggleLabel) {
-          menuToggleEl.setAttribute("aria-label", toggleLabel);
-        }
-      }
-
-      const socialAnchors = host.querySelectorAll(
-        '[data-framer-name="Social Media Icons"] a'
-      );
-      const socialRoutes = [
-        { href: "/about#social", label: "CRAVER on Instagram" },
-        { href: "/about#social", label: "CRAVER on X" },
-        { href: "/about#social", label: "CRAVER on TikTok" },
-        { href: "/about#social", label: "CRAVER on YouTube" },
-      ];
-      socialAnchors.forEach((a, idx) => {
-        const target = socialRoutes[idx];
-        if (!target) return;
-        if (a.getAttribute("href") !== target.href) {
-          a.setAttribute("href", target.href);
-        }
-        if (a.getAttribute("aria-label") !== target.label) {
-          a.setAttribute("aria-label", target.label);
-        }
-        if (a.hasAttribute("target")) {
-          a.removeAttribute("target");
-        }
+        patchLeafText(anchor, item.label);
       });
-    };
+    }
 
-    patchDom();
-    const observer = new MutationObserver(patchDom);
+    const closeLabelEl = host.querySelector('[data-framer-name="Toggle Label Close"]');
+    if (closeLabelEl) {
+      patchLeafText(closeLabelEl, locale === "id" ? "Tutup" : "Close");
+    }
+
+    const menuToggleEl = host.querySelector(
+      '[data-framer-name="Menu Toggle"]'
+    ) as HTMLElement | null;
+    if (menuToggleEl) {
+      if (menuToggleEl.getAttribute("role") !== "button") {
+        menuToggleEl.setAttribute("role", "button");
+      }
+      if (menuToggleEl.getAttribute("tabindex") !== "0") {
+        menuToggleEl.setAttribute("tabindex", "0");
+      }
+      const expandedStr = isOpen ? "true" : "false";
+      if (menuToggleEl.getAttribute("aria-expanded") !== expandedStr) {
+        menuToggleEl.setAttribute("aria-expanded", expandedStr);
+      }
+      const toggleLabel = isOpen
+        ? locale === "id"
+          ? "Tutup menu navigasi"
+          : "Close navigation menu"
+        : locale === "id"
+          ? "Buka menu navigasi"
+          : "Open navigation menu";
+      if (menuToggleEl.getAttribute("aria-label") !== toggleLabel) {
+        menuToggleEl.setAttribute("aria-label", toggleLabel);
+      }
+    }
+
+    const socialAnchors = host.querySelectorAll(
+      '[data-framer-name="Social Media Icons"] a'
+    );
+    const socialRoutes = [
+      { href: "/about#social", label: "CRAVER on Instagram" },
+      { href: "/about#social", label: "CRAVER on X" },
+      { href: "/about#social", label: "CRAVER on TikTok" },
+      { href: "/about#social", label: "CRAVER on YouTube" },
+    ];
+    socialAnchors.forEach((a, idx) => {
+      const target = socialRoutes[idx];
+      if (!target) return;
+      if (a.getAttribute("href") !== target.href) {
+        a.setAttribute("href", target.href);
+      }
+      if (a.getAttribute("aria-label") !== target.label) {
+        a.setAttribute("aria-label", target.label);
+      }
+      if (a.hasAttribute("target")) {
+        a.removeAttribute("target");
+      }
+    });
+  }, [locale, pathname, t]);
+
+  useEffect(() => {
+    const host = minimalNavHostRef.current;
+    if (!host) return;
+    patchMinimalNavDom();
+    const observer = new MutationObserver(patchMinimalNavDom);
     observer.observe(host, {
       childList: true,
       subtree: true,
@@ -356,7 +433,7 @@ export function SiteHeader() {
       attributeFilter: ["data-framer-name"],
     });
     return () => observer.disconnect();
-  }, [locale, pathname, t]);
+  }, [patchMinimalNavDom]);
 
   const handleMinimalNavClickCapture = (e: React.MouseEvent<HTMLDivElement>) => {
     if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
@@ -510,7 +587,8 @@ export function SiteHeader() {
     <header
       ref={headerRef}
       className={cn(
-        "sticky top-0 z-40 h-[72px] transition-colors duration-200",
+        "sticky top-0 h-[72px] transition-colors duration-200",
+        mobileMenuOpen ? "z-[60]" : "z-40",
         isHeroTransparent
           ? "craver-header-hero border-b border-white/15 bg-gradient-to-b from-[#16080A]/85 via-[#16080A]/55 to-transparent backdrop-blur-xs"
           : "border-b border-[#EEEEEE] bg-white"
@@ -784,17 +862,25 @@ export function SiteHeader() {
 
         {/* RIGHT: Bilingual Switcher + Submit CTA + Notifications + Profile + Mobile Drawer */}
         <div className="flex items-center gap-1 min-[375px]:gap-1.5 sm:gap-2 shrink-0">
-          {/* Animated Bilingual Segmented Switcher (ID | EN) */}
+          {/* Bilingual Segmented Switcher (ID | EN) — pure horizontal translation, vertically locked */}
           <div
             role="group"
             aria-label={t.nav.languageSwitcherLabel}
             className={cn(
-              "inline-flex h-7 min-[375px]:h-8 sm:h-9 items-center rounded-full border p-0.5 text-[10px] min-[375px]:text-[11px] font-bold tracking-wide transition-colors",
+              "craver-lang-switcher transition-colors",
               isHeroTransparent
                 ? "border-white/25 bg-white/12"
                 : "border-[#EEEEEE] bg-[#FAFAFA]"
             )}
           >
+            <span
+              aria-hidden="true"
+              data-locale={locale}
+              className={cn(
+                "craver-lang-indicator shadow-xs",
+                isHeroTransparent ? "bg-[#FFB800]" : "bg-[#E23744]"
+              )}
+            />
             {(["id", "en"] as const).map((code) => {
               const active = locale === code;
               return (
@@ -805,7 +891,7 @@ export function SiteHeader() {
                   aria-pressed={active}
                   aria-label={code === "id" ? t.nav.switchToId : t.nav.switchToEn}
                   className={cn(
-                    "relative z-10 inline-flex h-6 min-[375px]:h-7 sm:h-8 items-center justify-center rounded-full px-1.5 min-[375px]:px-2 sm:px-2.5 transition-colors cursor-pointer",
+                    "craver-lang-option",
                     active
                       ? isHeroTransparent
                         ? "text-[#1C1C1C]"
@@ -815,17 +901,6 @@ export function SiteHeader() {
                         : "text-[#696969] hover:text-[#1C1C1C]"
                   )}
                 >
-                  {active && (
-                    <motion.span
-                      layoutId="craver-lang-slider"
-                      transition={{ type: "spring", stiffness: 460, damping: 34 }}
-                      className={cn(
-                        "absolute inset-0 -z-10 rounded-full shadow-xs",
-                        isHeroTransparent ? "bg-[#FFB800]" : "bg-[#E23744]"
-                      )}
-                      aria-hidden="true"
-                    />
-                  )}
                   <span>{code.toUpperCase()}</span>
                 </button>
               );
@@ -1116,79 +1191,102 @@ export function SiteHeader() {
             )}
           </div>
 
-          {/* Mobile & Tablet Navigation Drawer: Framer MotionMinimalNavs */}
+          {/* Mobile & Tablet Navigation Drawer: Unified Scrollable Container */}
           <div className="relative h-7 w-[74px] min-[375px]:h-8 min-[375px]:w-[82px] sm:h-9 sm:w-[88px] shrink-0 lg:hidden">
+            {mobileMenuOpen && (
+              <div
+                aria-hidden="true"
+                className="craver-mobile-backdrop"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  closeMinimalNavIfOpen();
+                }}
+              />
+            )}
+
             <div
               ref={minimalNavHostRef}
+              role={mobileMenuOpen ? "dialog" : undefined}
+              aria-modal={mobileMenuOpen ? true : undefined}
+              aria-label={mobileMenuOpen ? t.nav.primaryLabel : undefined}
               onClickCapture={handleMinimalNavClickCapture}
               onKeyDown={handleMinimalNavKeyDown}
-              className="craver-framer-minimal-wrap absolute right-0 top-0 z-50 flex flex-col items-end"
+              onMouseOverCapture={patchMinimalNavDom}
+              onFocusCapture={patchMinimalNavDom}
+              style={
+                mobileMenuOpen
+                  ? ({ "--craver-drawer-top": `${drawerTopPx}px` } as CSSProperties)
+                  : undefined
+              }
+              className={cn(
+                "craver-framer-minimal-wrap",
+                mobileMenuOpen
+                  ? "craver-drawer-open"
+                  : "absolute right-0 top-0 z-50 flex flex-col items-end"
+              )}
             >
               <MotionMinimalNavs showClock={false} />
 
               {mobileMenuOpen && (
-                <div className="craver-mobile-drawer-footer w-[min(340px,calc(100vw-20px))] rounded-b-2xl border border-t-0 border-[#EEEEEE] bg-white px-4 pb-4 pt-2 text-[#1C1C1C]">
-                  {/* Location selector inside mobile drawer when top bar hides it */}
-                  <div className="mb-3 sm:hidden">
-                    <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wider text-[#696969]">
-                      {t.nav.jakartaNeighborhoods}
-                    </p>
-                    <div className="flex flex-wrap gap-1.5">
-                      {JAKARTA_AREAS.slice(0, 5).map((area) => (
-                        <button
-                          key={area}
-                          type="button"
-                          onClick={() => {
-                            handleAreaSelect(area);
-                            closeMinimalNavIfOpen();
-                          }}
-                          className={cn(
-                            "rounded-full border px-2.5 py-1 text-xs font-medium transition",
-                            selectedArea === area
-                              ? "border-[#E23744] bg-[#FFF0F1] text-[#E23744]"
-                              : "border-[#EEEEEE] bg-[#FAFAFA] text-[#1C1C1C]"
-                          )}
-                        >
-                          {translateAreaLabel(area, locale)}
-                        </button>
-                      ))}
+                <div className="craver-mobile-drawer-extra">
+                  {/* 4. Jakarta Neighborhoods */}
+                  <div className="craver-drawer-section">
+                    <p className="craver-drawer-heading">{t.nav.jakartaNeighborhoods}</p>
+                    <div className="flex flex-wrap gap-2">
+                      {JAKARTA_AREAS.slice(0, 5).map((area) => {
+                        const selected = selectedArea === area;
+                        return (
+                          <button
+                            key={area}
+                            type="button"
+                            aria-pressed={selected}
+                            onClick={() => {
+                              handleAreaSelect(area);
+                              closeMinimalNavIfOpen();
+                            }}
+                            className="craver-drawer-chip"
+                          >
+                            {translateAreaLabel(area, locale)}
+                          </button>
+                        );
+                      })}
                     </div>
                   </div>
 
-                  {/* Explore categories (Cuisines, Areas, Cravings) inside mobile drawer */}
-                  <div className="border-t border-[#EEEEEE] pt-3">
-                    <div className="mb-2 flex items-center justify-between">
-                      <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-[#696969]">
-                        <Compass className="h-3.5 w-3.5 text-[#E23744]" aria-hidden="true" />
-                        {t.nav.exploreCategories}
-                      </span>
+                  {/* 5. Explore Categories */}
+                  <div className="craver-drawer-section">
+                    <p className="craver-drawer-heading">
+                      <Compass className="h-3.5 w-3.5 shrink-0 text-[#E23744]" aria-hidden="true" />
+                      <span>{t.nav.exploreCategories}</span>
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      {exploreTabs.map((tab) => {
+                        const active = mobileExploreTab === tab.id;
+                        return (
+                          <button
+                            key={tab.id}
+                            type="button"
+                            aria-pressed={active}
+                            onClick={() => setMobileExploreTab(tab.id)}
+                            className="craver-drawer-tab"
+                          >
+                            {tab.label}
+                          </button>
+                        );
+                      })}
                     </div>
+                  </div>
 
-                    <div className="mb-2.5 flex gap-1.5">
-                      {exploreTabs.map((tab) => (
-                        <button
-                          key={tab.id}
-                          type="button"
-                          onClick={() => setMobileExploreTab(tab.id)}
-                          className={cn(
-                            "rounded-full px-2.5 py-1 text-xs font-medium transition",
-                            mobileExploreTab === tab.id
-                              ? "bg-[#FFF0F1] font-semibold text-[#E23744]"
-                              : "bg-[#FAFAFA] text-[#696969]"
-                          )}
-                        >
-                          {tab.label}
-                        </button>
-                      ))}
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-1.5">
+                  {/* 6. Category Filters */}
+                  <div className="craver-drawer-section">
+                    <p className="craver-drawer-heading">{t.nav.categoryFilters}</p>
+                    <div className="grid grid-cols-2 gap-2">
                       {mobileExploreLinks.map((item) => (
                         <Link
                           key={item.href + item.label}
                           href={item.href}
                           onClick={() => closeMinimalNavIfOpen()}
-                          className="rounded-lg border border-[#EEEEEE] bg-[#FAFAFA] px-2.5 py-1.5 text-xs font-medium text-[#1C1C1C] transition hover:border-[#E23744]/40 hover:bg-[#FFF0F1] hover:text-[#E23744]"
+                          className="craver-drawer-filter-link"
                         >
                           {item.label}
                         </Link>
@@ -1196,15 +1294,15 @@ export function SiteHeader() {
                     </div>
                   </div>
 
-                  {/* Accessible Submit Restaurant CTA inside drawer */}
-                  <div className="mt-3 border-t border-[#EEEEEE] pt-3">
+                  {/* 7. Submit Restaurant CTA */}
+                  <div className="craver-drawer-section pb-0">
                     <Link
                       href="/contribute"
                       onClick={() => closeMinimalNavIfOpen()}
-                      className="flex w-full items-center justify-center gap-2 rounded-full bg-[#E23744] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#C91D2B]"
+                      className="craver-mobile-cta"
                     >
-                      <PlusCircle className="h-4 w-4" aria-hidden="true" />
-                      {t.nav.submitRestaurant}
+                      <PlusCircle className="h-4 w-4 shrink-0" aria-hidden="true" />
+                      <span>{t.nav.submitRestaurant}</span>
                     </Link>
                   </div>
                 </div>
